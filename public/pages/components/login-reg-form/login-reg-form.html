@@ -1,0 +1,58 @@
+<div class="modal-overlay hidden" id="modal-overlay"></div>
+<div class="modal-window hidden" id="login-reg-modal">
+    <h1 class="modal-heading">Вхід</h1>
+    <form class="form active" id="login-form">
+        <div class="text-input">
+            <label for="email" class="input-title">Електронна пошта</label>
+            <input type="email" id="email" name="email" class="input" required>
+        </div>
+        <div class="text-input password-wrapper">
+            <label for="password" class="input-title">Пароль</label>
+            <input type="password" id="password" name="password" class="input" required>
+            <button type="button" class="toggle-password" aria-label="Показати/Сховати пароль">
+                <img src="/public/images/hidden-icon.png" alt="password hidden">
+            </button>
+        </div>
+        <button type="submit" class="submit-button">Увійти</button>
+        <div class="footer">
+            <p>Немає акаунту?</p>
+            <a href="#">Зареєструватись</a>
+        </div>
+    </form>
+    <form class="form" id="registration-form">
+        <div class="text-input">
+            <label for="role" class="input-title">Роль</label>
+            <select name="role" id="role" class="input">
+                <option value="volunteer" selected>Волонтер</option>
+                <option value="military">Військовий</option>
+            </select>
+        </div>
+        <div class="text-input">
+            <label for="email" class="input-title">Електронна пошта</label>
+            <input type="email" id="email" name="email" class="input" required>
+        </div>
+        <div class="text-input">
+            <label for="text" class="input-title">Ім'я / Назва</label>
+            <input type="text" id="text" name="text" class="input" required>
+        </div>
+        <div class="text-input password-wrapper">
+            <label for="password" class="input-title">Пароль</label>
+            <input type="password" id="password" name="password" class="input" required>
+            <button type="button" class="toggle-password" aria-label="Показати/Сховати">
+                <img src="/public/images/hidden-icon.png" alt="password hidden">
+            </button>
+        </div>
+        <div class="text-input password-wrapper">
+            <label for="password-confirmation" class="input-title">Підтвердження пароля</label>
+            <input type="password" id="password-confirmation" name="password-confirmation" class="input" required>
+            <button type="button" class="toggle-password" aria-label="Показати/Сховати">
+                <img src="/public/images/hidden-icon.png" alt="password confirmation hidden">
+            </button>
+        </div>
+        <button type="submit" class="submit-button">Зареєструватись</button>
+        <div class="footer">
+            <p>Вже є акаунт?</p>
+            <a href="#" id="register">Увійти</a>
+        </div>
+    </form>
+</div>
