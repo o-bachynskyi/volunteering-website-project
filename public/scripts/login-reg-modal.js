@@ -27,15 +27,15 @@ document.addEventListener("DOMContentLoaded", () => {
       regLink.addEventListener("click", (e) => {
         e.preventDefault();
         heading.textContent = "Реєстрація";
-        registrationForm.classList.add("active");
-        loginForm.classList.remove("active");
+        registrationForm.classList.add("active-modal");
+        loginForm.classList.remove("active-modal");
       });
 
       loginLink.addEventListener("click", (e) => {
         e.preventDefault();
         heading.textContent = "Вхід";
-        loginForm.classList.add("active");
-        registrationForm.classList.remove("active");
+        loginForm.classList.add("active-modal");
+        registrationForm.classList.remove("active-modal");
       });
 
       const closeModal = () => {
@@ -48,6 +48,23 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeModal();
     });
+
+    loginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        // Assume login is successful (replace with real auth)
+        localStorage.setItem("loggedIn", "true");
+        showAuthenticatedUI();
+        closeModal();
+      });
+
+      // HANDLE REGISTRATION (simplified)
+      registrationForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        // Assume registration is successful (replace with real logic)
+        localStorage.setItem("loggedIn", "true");
+        showAuthenticatedUI();
+        closeModal();
+      });
   }
 
   // Always open login form when clicking login button
@@ -59,11 +76,36 @@ document.addEventListener("DOMContentLoaded", () => {
     const registrationForm = document.getElementById("registration-form");
 
     heading.textContent = "Вхід";
-    loginForm.classList.add("active");
-    registrationForm.classList.remove("active");
+    loginForm.classList.add("active-modal");
+    registrationForm.classList.remove("active-modal");
 
     overlay.classList.remove("hidden");
     modal.classList.remove("hidden");
     document.body.classList.add("modal-open");
   });
+
+  // Load UI state on reload
+  if (localStorage.getItem("loggedIn") === "true") {
+    showAuthenticatedUI();
+  }
+});
+
+// Show/hide buttons
+function showAuthenticatedUI() {
+  const loginButton = document.getElementById("login-button");
+  const addPostButton = document.getElementById("add-post-button");
+  const profileButton = document.getElementById("profile-button");
+
+  loginButton?.classList.add("hidden");
+  addPostButton?.classList.remove("hidden");
+  profileButton?.classList.remove("hidden");
+}
+
+// Logout
+
+const logoutButton = document.getElementById("logout-button");
+
+logoutButton?.addEventListener("click", () => {
+  localStorage.removeItem("loggedIn");
+  location.reload();
 });

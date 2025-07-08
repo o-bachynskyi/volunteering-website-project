@@ -46,7 +46,7 @@
     width: 100%;
 }
 
-.form.active {
+.form.active-modal {
     display: flex;
 }
 

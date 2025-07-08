@@ -26,3 +26,24 @@ collapseBtn.addEventListener('click', () => {
   sidebar.classList.toggle('collapsed');
   icon.classList.toggle('rotated');
 });
+
+// Profile Dropdown
+
+const profileButton = document.getElementById('profile-button')
+const profileDropdown = document.getElementById('profile-dropdown')
+
+// Toggle dropdown on click
+profileButton.addEventListener('click', (e) => {
+  e.stopPropagation();
+  profileDropdown.classList.toggle('hidden');
+});
+
+// Prevent clicks inside dropdown from closing it
+profileDropdown.addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+
+// Hide dropdown when clicking outside
+document.addEventListener('click', () => {
+  profileDropdown.classList.add('hidden');
+});
