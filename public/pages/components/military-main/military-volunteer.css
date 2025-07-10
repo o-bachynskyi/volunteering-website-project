@@ -1,0 +1,89 @@
+.users-list-main {
+    max-width: 546px;
+    margin: 0 auto;
+    width: 100%;
+    min-width: 180px;
+}
+
+.user-card {
+    width: 100%;
+    background-color: #F0F0F0;
+    border-radius: 30px;
+    padding: 23px;
+    margin: 25px 0;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.card-content {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+}
+
+
+.card-content img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 8px;
+}
+
+.card-data {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow: auto;
+    scrollbar-width: thin;
+}
+
+.user-data {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    font-weight: 600; 
+}
+
+.user-name, .user-email {
+    margin: 0;
+}
+
+.user-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 150px;
+    overflow-y: auto; 
+    margin-top: 10px;
+}
+
+.user-tag {
+    display: flex;
+    align-items: center;
+    background-color: #d9d9d9;
+    border-radius: 30px;
+    padding: 6px 10px;
+    font-size: 16px;
+    color: #1c1c1c;
+    max-width: 100%;
+    line-height: 1;              
+    font-weight: 400; 
+}
+
+.user-tag-title {
+    margin: 0;
+    word-break: break-word;
+}
+
+.user-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+.user-card-link:hover .user-card {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); /* Optional hover effect */
+    cursor: pointer;
+}

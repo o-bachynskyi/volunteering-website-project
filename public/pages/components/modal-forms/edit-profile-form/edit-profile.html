@@ -1,0 +1,92 @@
+<div class="modal-overlay hidden" id="modal-overlay"></div>
+<div class="edit-profile-modal-window hidden" id="edit-profile-modal">
+    <button class="close-modal-button" id="close-modal-button" aria-label="Закрити вікно">
+        <img src="/public/images/close-modal-icon.png" alt="Close window">
+    </button>
+    <h1 class="modal-heading">Редагувати</h1>
+    <form class="form active-modal" id="edit-profile-form">
+        <div class="profile-picture-edit">
+            <div class="profile-picture-button">
+                <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="profile-picture" alt="profile picture">
+                <label for="profile-image-upload" class="change-profile-picture" title="Змінити фото">
+                    <div class="profile-picture-overlay"></div>
+                    <img src="/public/images/camera-icon.png" class="change-pfp-icon" alt="change profile picture">
+                </label>
+                <input type="file" id="profile-image-upload" accept="image/*" hidden>
+            </div>
+            <button class="delete-profile-picture" type="button" aria-label="Видалити фото">
+                <img src="/public/images/close-icon.png" class="delete-pfp-icon" alt="Delete profile picture">
+            </button>
+        </div>
+        <div class="profile-text-input">
+            <label for="profile-title" class="input-title">Ім'я / Назва</label>
+            <input type="text" id="profile-title" name="profile-title" required>
+        </div>
+        <div class="profile-text-input">
+            <label for="profile-tags" class="input-title">Теги</label>
+            <input type="search" id="profile-tags" name="profile-tags" placeholder="Пошук" required>
+            <div class="profile-tags" id="user-profile-tags">
+                <div class="profile-tag">
+                    <p class="profile-tag-title">test-tag1</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">tag2</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="profile-text-input profile-description">
+            <label for="profile-text" class="input-title">Текст</label>
+            <textarea id="profile-text" name="profile-text" class="profile-textarea"></textarea>
+        </div>
+        <button type="submit" class="submit-button">Зберегти</button>
+    </form>
+</div>
+

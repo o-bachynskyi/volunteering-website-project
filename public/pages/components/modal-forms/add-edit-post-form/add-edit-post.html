@@ -1,0 +1,231 @@
+<div class="modal-overlay hidden" id="modal-overlay"></div>
+<div class="post-modal-window hidden" id="post-modal">
+    <button class="close-modal-button" id="close-modal-button" aria-label="Закрити вікно">
+        <img src="/public/images/close-modal-icon.png" alt="Close window">
+    </button>
+    <h1 class="modal-heading">Створити допис</h1>
+    <form class="form active-modal" id="add-post-form">
+        <div class="post-text-input select-wrapper">
+            <label for="post-type" class="input-title">Тип</label>
+            <select name="type" id="type">
+                <option value="fundraising" selected>Збір коштів</option>
+                <option value="request">Запит на допомогу</option>
+            </select>
+        </div>
+        <div class="post-text-input">
+            <label for="post-title" class="input-title">Заголовок</label>
+            <input type="text" id="post-title" name="post-title" required>
+        </div>
+        <div class="post-text-input">
+            <label for="post-tags" class="input-title">Теги</label>
+            <input type="search" id="post-tags" name="post-tags" placeholder="Пошук" required>
+            <div class="post-tags" id="user-post-tags">
+                <div class="post-tag">
+                    <p class="post-tag-title">test-tag1</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">tag2</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="post-text-input post-description">
+            <label for="post-text" class="input-title">Текст</label>
+            <div class="textarea-wrapper">
+                <textarea id="post-text" name="post-text" required></textarea>
+                <div class="image-container" id="image-preview-container">
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                </div>
+                <hr class="textarea-divider">
+                <label for="image-upload" class="image-upload-icon" title="Додати фото">
+                    <img src="/public/images/image-icon.png" alt="Додати фото">
+                </label>
+                <input type="file" id="image-upload" accept="image/*" multiple hidden>
+            </div>
+        </div>
+        <button type="submit" class="submit-button">Створити</button>
+    </form>
+    <form class="form" id="edit-post-form">
+        <div class="post-text-input select-wrapper">
+            <label for="post-type" class="input-title">Тип</label>
+            <select name="type" id="type">
+                <option value="fundraising" selected>Збір коштів</option>
+                <option value="request">Запит на допомогу</option>
+            </select>
+        </div>
+        <div class="post-text-input">
+            <label for="post-title" class="input-title">Заголовок</label>
+            <input type="text" id="post-title" name="post-title" required>
+        </div>
+        <div class="post-text-input">
+            <label for="post-tags" class="input-title">Теги</label>
+            <input type="search" id="post-tags" name="post-tags" placeholder="Пошук" required>
+            <div class="post-tags" id="user-post-tags">
+                <div class="post-tag">
+                    <p class="post-tag-title">test-tag1</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">tag2</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+                <div class="post-tag">
+                    <p class="post-tag-title">dsaldsdl</p>
+                    <button class="close">
+                        <img src="/public/images/close-icon.png"/>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="post-text-input post-description">
+            <label for="post-text" class="input-title">Текст</label>
+            <div class="textarea-wrapper">
+                <textarea id="post-text" name="post-text" required></textarea>
+                <div class="image-container" id="image-preview-container">
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                    <button class="remove-image-button" aria-label="Видалити">
+                        <div class="remove-image-overlay"></div>
+                        <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+                        <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" class="added-image" alt="added-image">
+                    </button>
+                </div>
+                <hr class="textarea-divider">
+                <label for="image-upload" class="image-upload-icon" title="Додати фото">
+                    <img src="/public/images/image-icon.png" alt="Додати фото">
+                </label>
+                <input type="file" id="image-upload" accept="image/*" multiple hidden>
+            </div>
+        </div>
+        <button type="submit" class="submit-button">Зберегти</button>
+    </form>
+</div>

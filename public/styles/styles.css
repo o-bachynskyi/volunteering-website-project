@@ -110,60 +110,60 @@
 }
 
 .tags-icon {
-  position: absolute;
-  top: 4px;
-  left: 2.5px;
-  width: 1.25rem;
-  pointer-events: none; 
+    position: absolute;
+    top: 4px;
+    left: 2.5px;
+    width: 1.25rem;
+    pointer-events: none; 
 }
 
 .tags-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 12px;
 }
 
 .tag {
-  display: flex;
-  align-items: center;
-  background-color: #d9d9d9;
-  border-radius: 30px;
-  padding: 6px 10px 6px 14px;
-  font-size: 14px;
-  color: #1c1c1c;
-  max-width: 100%;
-  transition: 0.3s;
+    display: flex;
+    align-items: center;
+    background-color: #d9d9d9;
+    border-radius: 30px;
+    padding: 6px 10px 6px 14px;
+    font-size: 14px;
+    color: #1c1c1c;
+    max-width: 100%;
+    transition: 0.3s;
 }
 
 .tag-title {
-  margin: 0;
-  word-break: break-word;
+    margin: 0;
+    word-break: break-word;
 }
 
 .tag .close {
-  background: none;
-  border: none;
-  margin-left: 8px;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
+    background: none;
+    border: none;
+    margin-left: 8px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
 }
 
 .tag .close img {
-  width: 14px;
-  height: 14px;
-  cursor: pointer;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
 }
 
 .tag:hover {
-  background-color: #c6c6c6;
+    background-color: #c6c6c6;
 }
 
 .tag:has(.close:hover) {
-  background-color: #e73c3c;
-  color: white;
+    background-color: #e73c3c;
+    color: white;
 }
 
 .hidden {
@@ -249,6 +249,10 @@
     background-color: #d9d9d9;
 }
 
+.dropdown-item:active {
+    background-color: #d9d9d9;
+}
+
 .dropdown-item img {
     width: 22px;
     height: 22px;
@@ -288,11 +292,11 @@ main {
 
 .post-header {
     display: flex;
-    align-items: center;
     font-weight: bold;
+    align-items: center;
 }
 
-.post-header img {
+.post-header .post-profile-pic {
     width: 60px;
     height: 60px;
     border-radius: 50%;

@@ -1,0 +1,56 @@
+.answer-request-modal-window {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 90vw;
+    max-width: 50rem;
+    max-height: 55.25rem;
+    color: #1c1c1c;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    background: #f0f0f0;
+    padding: 2.1875rem 2.0625rem;
+    border-radius: 20px;
+    z-index: 101;
+    transition: transform 0.3s ease;
+    overflow-y: auto
+}
+
+.answer-text-input input {
+    width: 100%;
+    height: 100%;
+    min-height: 3rem;
+    background-color: white;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
+    padding: 0 15px;
+    font-weight: 400;
+    font-size: 16px;
+}
+
+.answer-text-input {
+    display: flex;
+    flex-direction: column;
+    font-size: 20px;
+    font-weight: bold;
+    gap: 5px;
+    width: 100%
+}
+
+.answer-text-input textarea {
+    height: 100%;
+    width: 100%;
+    font-size: 16px;
+    max-height: 6.5rem;
+    max-width: 711px;
+    padding: 0 5px;
+    resize: none;
+    border: none;
+    outline: none;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}

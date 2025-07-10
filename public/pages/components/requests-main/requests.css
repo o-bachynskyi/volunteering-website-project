@@ -1,0 +1,67 @@
+.request-post-header {
+    display: flex;
+    font-weight: bold;
+    justify-content: space-between;
+}
+
+.request-post-header-left {
+    display: flex;
+    align-items: center;
+}
+
+.request-post-header .post-profile-pic {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 12px;
+}
+
+
+.answer-request-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 9.75rem;
+    height: 2.5rem;
+    background-color: #a4ffb1;
+    border: none;
+    border-radius: 30px;
+    color: #1c1c1c;
+    font-size: 1.125rem;
+    font-weight: bold;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.answer-request-button:hover {
+    background-color: #99f0a6
+}
+
+.answer-request-button:active {
+    background-color: #8cdd9a
+}
+
+.answer-request-button .button-icon {
+    display: none;
+    width: 26px;
+    height: 26px;
+    margin-top: 2px;
+}
+
+@media (max-width: 500px) {
+    .answer-request-button .button-text {
+        display: none;
+    }
+
+    .answer-request-button .button-icon {
+        display: block;
+    }
+
+    .answer-request-button {
+        width: 2.5rem;
+        border-radius: 50%;
+        padding: 0;
+        justify-content: center;
+    }
+}

@@ -6,6 +6,12 @@
     <title>Назва</title>
     <link rel="stylesheet" href="/public/styles/styles.css">
     <link rel="stylesheet" href="/public/pages/components/login-reg-form/login-reg-styles.css">
+    <link rel="stylesheet" href="/public/pages/components/military-main/military-volunteer.css">
+    <link rel="stylesheet" href="/public/pages/components/user-profile-main/user-profile.css">
+    <link rel="stylesheet" href="/public/pages/components/modal-forms/add-edit-post-form/add-edit-post.css">
+    <link rel="stylesheet" href="/public/pages/components/requests-main/requests.css">
+    <link rel="stylesheet" href="/public/pages/components/modal-forms/edit-profile-form/edit-profile.css">
+    <link rel="stylesheet" href="/public/pages/components/modal-forms/answer-request-form/answer-request.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -74,7 +80,7 @@
                 <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" alt="profile picture">
             </button>
             <div class="profile-dropdown hidden" id="profile-dropdown">
-                <a href="/profile.html" class="dropdown-item">
+                <a href="#" class="dropdown-item" id="open-profile-button" data-page="user-profile">
                     <img src="/public/images/account-icon.png" alt="open profile">
                     Профіль
                 </a>
@@ -113,7 +119,7 @@
         <div id="fundraisers-main">
             <article class="post">
                 <header class="post-header">
-                    <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" alt="User Profile Picture" class="profile-pic">
+                    <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" alt="User Profile Picture" class="post-profile-pic">
                     <div class="post-data">
                         <div class="user-info">
                             <p class="name">Ім'я</p>
@@ -136,7 +142,7 @@
             </article>
             <article class="post">
                 <header class="post-header">
-                    <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" alt="User Profile Picture" class="profile-pic">
+                    <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" alt="User Profile Picture" class="post-profile-pic">
                     <div class="post-data">
                         <div class="user-info">
                             <p class="name">Ім'я</p>
@@ -163,6 +169,7 @@
     <div id="modal-container"></div>
     <script src="/public/scripts/app.js"></script>
     <script src="/public/scripts/update-main.js"></script>
-    <script type="module" src="/public/scripts/login-reg-modal.js"></script>
+    <script src="/public/scripts/textarea-grow.js"></script>
+    <script type="module" src="/public/scripts/modals.js"></script>
 </body>
 </html>

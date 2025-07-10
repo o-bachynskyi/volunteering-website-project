@@ -1,0 +1,224 @@
+.user-profile {
+    width: 100%;
+    background-color: #F0F0F0;
+    border-radius: 0 0 30px 30px;
+    padding: 24px 28px;
+    margin: 0 0 12.5px 0;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+    text-align: justify;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    max-width: 750px;
+}
+
+.profile-header img {
+    width: 180px;
+    height: 180px;
+    border-radius: 20px;
+    object-fit: cover;
+    margin-right: 19px;
+}
+
+.profile-info {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    width: 100%;
+    max-width: 551px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.profile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.profile-tags {
+    display: flex;
+    gap: 5px;
+    width: 100%;
+    min-width: 100px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: 2px;
+}
+
+.profile-tag {
+    display: flex;
+    align-items: center;
+    background-color: #d9d9d9;
+    border-radius: 30px;
+    padding: 6px 10px;
+    font-size: 16px;
+    color: #1c1c1c;
+    max-width: 100%;
+    line-height: 1;              
+    font-weight: 400; 
+}
+
+.profile-tag-title {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.edit-profile-button {
+    position: absolute;
+    right: 0;
+    top: -5.5px;
+    width: 8.75rem;
+    height: 2.5rem;
+    background-color: #d9d9d9;
+    border: none;
+    border-radius: 30px;
+    color: #1c1c1c;
+    font-size: 1.125rem;
+    font-weight: bold;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.edit-profile-button:hover {
+    background-color: #c6c6c6
+}
+
+.edit-profile-button:active {
+    background-color: #b1b1b1
+}
+
+.profile-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0 5px 0;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.profile-divider .line {
+    flex: 1;
+    height: 3px;
+    background-color: #d9d9d9;
+    border: none;
+    border-radius: 10px;
+}
+
+.profile-content p {
+    font-size: 18px;
+}
+
+.profile-posts-heading {
+    font-size: 20px;
+    text-align: center;
+    margin-bottom: -12.5px;
+}
+
+.post-header {
+    position: relative;
+}
+
+.post-more-button {
+    position: absolute;
+    right: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: none;
+    border-radius: 50%;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.post-more-button img {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+}
+
+.post-more-button:hover {
+    background-color: #d9d9d9
+}
+
+.post-more-button:active {
+    background-color: #c6c6c6
+}
+
+.post-more-dropdown {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    width: 145px;
+    height: 77px;
+    padding: 15px 0;
+    border-radius: 10px;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.25);
+    top: 40px;
+    right: 0;
+    background-color: #ffffff;
+}
+
+.post-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    width: 100%;
+    padding: 4px 15px;
+    text-decoration: none;
+    color: #1c1c1c;
+    border: none;
+    transition: 0.3s;
+    cursor: pointer;
+    background-color: #ffffff;
+}
+
+.post-dropdown-item:hover {
+    background-color: #d9d9d9;
+}
+
+.post-dropdown-item:active {
+    background-color: #c6c6c6
+}
+
+.post-dropdown-item img {
+    width: 16px;
+    height: 16px;
+    border-radius: 0;
+    margin: 0;
+}
+
+@media (max-width:600px) {
+    .profile-header {
+        flex-direction: column;
+    }
+
+    .profile-header img {
+        margin: 0;
+    }
+
+    .profile-info {
+        max-width: 492px;
+        gap: 2px;
+        margin-top: 8px;
+    }
+
+    .edit-profile-button {
+        width: 100%;
+        position: static;
+    }
+}

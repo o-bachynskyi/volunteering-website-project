@@ -1,4 +1,4 @@
-const navButtons = document.querySelectorAll('.nav-button a');
+const navButtons = document.querySelectorAll('.nav-button a, #open-profile-button');
 const fundraisersMain = document.getElementById('fundraisers-main');
 const dynamicMain = document.getElementById('dynamic-main');
 
@@ -14,12 +14,21 @@ navButtons.forEach(link => {
     document.querySelectorAll('.nav-button').forEach(btn => {
       btn.classList.remove('active');
     });
-    link.parentElement.classList.add('active');
+
+    // Add active only if link is inside a nav-button (sidebar)
+    if (link.closest('.nav-button')) {
+      link.closest('.nav-button').classList.add('active');
+    }
+
+    if (page === 'user-profile') {
+      document.getElementById('profile-dropdown')?.classList.add('hidden');
+    }
 
     if (page === 'fundraisers') {
       // Show static fundraisers
       fundraisersMain.classList.remove('hidden');
       dynamicMain.innerHTML = ''; // Remove previously injected page
+      window.scrollTo(0, 0);
     } else {
       // Load and show dynamic page
       try {
@@ -30,6 +39,8 @@ navButtons.forEach(link => {
 
         // Hide fundraisers
         fundraisersMain.classList.add('hidden');
+        // Scroll to top on content change
+        window.scrollTo(0, 0);
       } catch (err) {
         dynamicMain.innerHTML = "<p style='padding: 1rem;'>Помилка завантаження сторінки.</p>";
         fundraisersMain.classList.add('hidden');
@@ -42,8 +53,14 @@ navButtons.forEach(link => {
 // Load saved page on initial load
 window.addEventListener('DOMContentLoaded', () => {
   const savedPage = localStorage.getItem('selectedPage') || 'fundraisers';
-  const linkToClick = document.querySelector(`.nav-button a[data-page="${savedPage}"]`);
+  let linkToClick = document.querySelector(`.nav-button a[data-page="${savedPage}"]`);
+
+  if (!linkToClick && savedPage === 'user-profile') {
+    linkToClick = document.getElementById('open-profile-button');
+  }
+
   if (linkToClick) {
+    window.scrollTo(0, 0);
     linkToClick.click();
   }
 });
