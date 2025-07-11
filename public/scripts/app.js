@@ -123,3 +123,22 @@ document.addEventListener('click', (e) => {
   });
 });
 
+// Deleting Tags
+document.addEventListener('click', (e) => {
+  const closeBtn = e.target.closest('.close');
+
+  if (closeBtn && closeBtn.closest('.profile-tag, .post-tag, .tag')) {
+    const tagElement = closeBtn.closest('.profile-tag, .post-tag, .tag');
+    tagElement.remove(); // Remove tag from DOM
+  }
+});
+
+// Deleting Post/Answer Images
+document.addEventListener('click', (e) => {
+  const removeBtn = e.target.closest('.remove-image-button');
+
+  if (removeBtn) {
+    removeBtn.remove(); // Remove tag from DOM
+  }
+});
+
