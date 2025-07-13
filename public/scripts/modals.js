@@ -7,59 +7,124 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // LOGIN / REGISTER MODAL
   loginButton?.addEventListener("click", async () => {
-    if (!document.getElementById("login-reg-modal")) {
-      const res = await fetch("/public/pages/components/login-reg-form/login-reg-form.html");
-      const html = await res.text();
-      modalContainer.innerHTML = html;
+  if (!document.getElementById("login-reg-modal")) {
+    const res = await fetch("/public/pages/components/login-reg-form/login-reg-form.html");
+    const html = await res.text();
+    modalContainer.innerHTML = html;
 
-      const overlay = document.getElementById("modal-overlay");
-      const modal = document.getElementById("login-reg-modal");
-      const heading = modal.querySelector(".modal-heading");
+    const overlay = document.getElementById("modal-overlay");
+    const modal = document.getElementById("login-reg-modal");
+    const heading = modal.querySelector(".modal-heading");
 
-      const loginForm = document.getElementById("login-form");
-      const registrationForm = document.getElementById("registration-form");
+    const loginForm = document.getElementById("login-form");
+    const registrationForm = document.getElementById("registration-form");
 
-      const regLink = loginForm.querySelector("a");
-      const loginLink = registrationForm.querySelector("a");
+    const regLink = loginForm.querySelector("a");
+    const loginLink = registrationForm.querySelector("a");
 
-      initTogglePassword();
+    initTogglePassword();
 
-      regLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        heading.textContent = "Реєстрація";
-        registrationForm.classList.add("active-modal");
-        loginForm.classList.remove("active-modal");
-      });
+    regLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      heading.textContent = "Реєстрація";
+      registrationForm.classList.add("active-modal");
+      loginForm.classList.remove("active-modal");
+    });
 
-      loginLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        heading.textContent = "Вхід";
-        loginForm.classList.add("active-modal");
-        registrationForm.classList.remove("active-modal");
-      });
+    loginLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      heading.textContent = "Вхід";
+      loginForm.classList.add("active-modal");
+      registrationForm.classList.remove("active-modal");
+    });
 
-      overlay?.addEventListener("click", closeModal);
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeModal();
-      });
+    overlay?.addEventListener("click", closeModal);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
 
-      loginForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        localStorage.setItem("loggedIn", "true");
-        showAuthenticatedUI();
-        closeModal();
-      });
+    loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-      registrationForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        localStorage.setItem("loggedIn", "true");
-        showAuthenticatedUI();
-        closeModal();
-      });
+  const email = loginForm.querySelector('input[name="email"]').value;
+  const password = loginForm.querySelector('input[name="password"]').value;
+
+  try {
+    const response = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      // Успішний вхід
+      localStorage.setItem("loggedIn", "true");
+      // (опційно) Зберегти токен: localStorage.setItem("token", result.token);
+      showAuthenticatedUI();
+      closeModal();
+    } else {
+      alert(result.message || 'Невірний email або пароль');
     }
+  } catch (err) {
+    console.error('Помилка входу:', err);
+    alert('Сервер недоступний. Спробуйте пізніше.');
+  }
+});
 
-    showLoginModal();
-  });
+
+    registrationForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const fullName = registrationForm.querySelector('input[name="text"]').value;
+      const email = registrationForm.querySelector('input[name="email"]').value;
+      const password = registrationForm.querySelector('input[name="password"]').value;
+      const selectedRole = registrationForm.querySelector('select[name="role"]').value;
+
+      const roleMap = {
+        vo: 'vo',
+        mi: 'mi',
+      };
+      const roleId = roleMap[selectedRole] || selectedRole;
+
+      try {
+        const response = await fetch('/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            full_name: fullName,
+            email,
+            password,
+            role_id: roleId,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          registrationForm.reset();
+          closeModal();
+          //alert("Реєстрація успішна");
+          localStorage.setItem("loggedIn", "true");
+          showAuthenticatedUI();
+        } else {
+          alert(result.message || "Помилка реєстрації");
+        }
+      } catch (err) {
+        console.error('Помилка при запиті:', err);
+        alert('Сталася помилка. Спробуйте пізніше.');
+      }
+    });
+  }
+
+  showLoginModal();
+});
+
 
   // ADD POST MODAL
   addPostButton?.addEventListener("click", async () => {
