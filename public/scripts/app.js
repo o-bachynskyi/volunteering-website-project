@@ -75,7 +75,7 @@ document.addEventListener('click', (e) => {
       if (tags) tags.innerHTML = '';
 
       // 3. Clear image preview container
-      const images = modal.querySelector('#image-preview-container');
+      const images = modal.querySelector('#post-image-preview-container, #answer-image-preview-container');
       if (images) images.innerHTML = '';
     }
     if (overlay) overlay.classList.add('hidden');
@@ -130,6 +130,50 @@ document.addEventListener('click', (e) => {
   if (closeBtn && closeBtn.closest('.profile-tag, .post-tag, .tag')) {
     const tagElement = closeBtn.closest('.profile-tag, .post-tag, .tag');
     tagElement.remove(); // Remove tag from DOM
+  }
+});
+
+// Adding Images (Add/Edit Post, Answer Request)
+document.addEventListener('change', function (e) {
+  const input = e.target;
+
+  // Make sure it's the correct input
+  if (
+    input.matches('input[type="file"].image-upload') &&
+    input.files.length > 0
+  ) {
+    const files = input.files;
+    const form = input.closest("form");
+    const imageContainer = form.querySelector(".image-container");
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const imgSrc = e.target.result;
+
+        const imageWrapper = document.createElement("button");
+        imageWrapper.setAttribute("type", "button");
+        imageWrapper.classList.add("remove-image-button");
+        imageWrapper.setAttribute("aria-label", "Видалити");
+
+        imageWrapper.innerHTML = `
+          <div class="remove-image-overlay"></div>
+          <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+          <img src="${imgSrc}" class="added-image" alt="added-image">
+        `;
+
+        imageWrapper.addEventListener('click', () => {
+          imageWrapper.remove();
+        });
+
+        imageContainer.appendChild(imageWrapper);
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so same image can be selected again
+    input.value = "";
   }
 });
 

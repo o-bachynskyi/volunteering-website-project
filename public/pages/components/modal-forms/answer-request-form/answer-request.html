@@ -13,7 +13,7 @@
             <label for="answer-text" class="input-title">Текст</label>
             <div class="textarea-wrapper">
                 <textarea id="answer-text" name="answer-text" class="answer-textarea" required></textarea>
-                <div class="image-container" id="image-preview-container">
+                <div class="image-container" id="answer-image-preview-container">
                     <button type="button" class="remove-image-button" aria-label="Видалити">
                         <div class="remove-image-overlay"></div>
                         <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
@@ -41,10 +41,10 @@
                     </button>
                 </div>
                 <hr class="textarea-divider">
-                <label for="image-upload" class="image-upload-icon" title="Додати фото">
+                <label for="answer-image-upload" class="image-upload-icon" title="Додати фото">
                     <img src="/public/images/image-icon.png" alt="Додати фото">
                 </label>
-                <input type="file" id="image-upload" accept="image/*" multiple hidden>
+                <input type="file" class="image-upload" id="answer-image-upload" accept="image/*" multiple hidden>
             </div>
         </div>
         <button type="submit" class="submit-button">Надіслати</button>

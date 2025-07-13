@@ -17,7 +17,7 @@
 
       // Хешуємо пароль
       const hashedPassword = await bcrypt.hash(password, 10);
-
+      
       // Додаємо користувача до бази
       await pool.query(
         `INSERT INTO "user" (user_id, full_name, email, password, role_id)
