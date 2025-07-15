@@ -189,6 +189,7 @@
     padding: 0 15px;
     font-weight: 400;
     font-size: 16px;
+    text-align: justify;
 }
 
 .profile-text-input .profile-textarea {
