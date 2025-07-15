@@ -1,6 +1,45 @@
+// update-main.js
+
 const navButtons = document.querySelectorAll('.nav-button a, #open-profile-button');
 const fundraisersMain = document.getElementById('fundraisers-main');
 const dynamicMain = document.getElementById('dynamic-main');
+
+// Перевірка, чи користувач залогінений
+function isUserLoggedIn() {
+  return localStorage.getItem('loggedIn') === "true";
+}
+
+// Відкрити модальне вікно логіну (імітовано клік на кнопку логіну)
+function openLoginModal() {
+  document.getElementById('login-button')?.click();
+}
+
+// Функція для завантаження даних профілю користувача та вставки їх у DOM
+async function loadUserProfile() {
+  const userId = localStorage.getItem("userId");
+  if (!userId) return;
+
+  try {
+    const res = await fetch(`/auth/profile?id=${userId}`);
+    const result = await res.json();
+
+    if (res.ok) {
+      const { full_name, email, role } = result.user || result;
+
+      const nameEl = document.getElementById("profile-name");
+      const emailEl = document.getElementById("profile-email");
+      const roleEl = document.getElementById("profile-role");
+
+      if (nameEl) nameEl.textContent = full_name || "Нема імені";
+      if (emailEl) emailEl.textContent = email || "Нема email";
+      if (roleEl) roleEl.textContent = role || "Нема ролі";
+    } else {
+      console.error(result.message || "Не вдалося отримати профіль");
+    }
+  } catch (err) {
+    console.error("Помилка при завантаженні профілю:", err);
+  }
+}
 
 navButtons.forEach(link => {
   link.addEventListener('click', async (e) => {
@@ -8,39 +47,45 @@ navButtons.forEach(link => {
 
     const page = link.dataset.page;
 
-    // Save selected page to localStorage
+    if (page === 'user-profile') {
+      document.getElementById('profile-dropdown')?.classList.add('hidden');
+
+      if (!isUserLoggedIn()) {
+        openLoginModal();
+        return; // Забороняємо завантаження профілю без логіну
+      }
+    }
+
     localStorage.setItem('selectedPage', page);
 
     document.querySelectorAll('.nav-button').forEach(btn => {
       btn.classList.remove('active');
     });
 
-    // Add active only if link is inside a nav-button (sidebar)
     if (link.closest('.nav-button')) {
       link.closest('.nav-button').classList.add('active');
     }
 
-    if (page === 'user-profile') {
-      document.getElementById('profile-dropdown')?.classList.add('hidden');
-    }
-
     if (page === 'fundraisers') {
-      // Show static fundraisers
       fundraisersMain.classList.remove('hidden');
-      dynamicMain.innerHTML = ''; // Remove previously injected page
+      dynamicMain.innerHTML = '';
       window.scrollTo(0, 0);
     } else {
-      // Load and show dynamic page
       try {
         const res = await fetch(`/public/pages/components/${page}-main/${page}.html`);
         if (!res.ok) throw new Error("Page not found");
+
         const html = await res.text();
         dynamicMain.innerHTML = html;
 
-        // Hide fundraisers
         fundraisersMain.classList.add('hidden');
-        // Scroll to top on content change
         window.scrollTo(0, 0);
+
+        // Якщо це сторінка профілю — завантажуємо дані користувача
+        if (page === 'user-profile') {
+          await loadUserProfile();
+        }
+
       } catch (err) {
         dynamicMain.innerHTML = "<p style='padding: 1rem;'>Помилка завантаження сторінки.</p>";
         fundraisersMain.classList.add('hidden');
@@ -50,7 +95,6 @@ navButtons.forEach(link => {
   });
 });
 
-// Load saved page on initial load
 window.addEventListener('DOMContentLoaded', () => {
   const savedPage = localStorage.getItem('selectedPage') || 'fundraisers';
   let linkToClick = document.querySelector(`.nav-button a[data-page="${savedPage}"]`);
@@ -59,9 +103,13 @@ window.addEventListener('DOMContentLoaded', () => {
     linkToClick = document.getElementById('open-profile-button');
   }
 
+  if (savedPage === 'user-profile' && !isUserLoggedIn()) {
+    openLoginModal();
+    return;
+  }
+
   if (linkToClick) {
     window.scrollTo(0, 0);
     linkToClick.click();
   }
 });
-
