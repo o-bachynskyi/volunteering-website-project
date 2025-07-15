@@ -330,6 +330,7 @@ main {
 
 .post-content p {
     font-size: 18px;
+    word-break: break-all;
 }
 
 .post-content h2 {
@@ -528,6 +529,7 @@ main {
         border-bottom: 2px solid #c5c5c5;
         padding: 7px 0;
         justify-content: center;
+        z-index: 50;
     }
 
     .collapse-sidebar {
