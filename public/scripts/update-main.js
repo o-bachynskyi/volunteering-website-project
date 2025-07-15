@@ -1,5 +1,3 @@
-// update-main.js
-
 const navButtons = document.querySelectorAll('.nav-button a, #open-profile-button');
 const fundraisersMain = document.getElementById('fundraisers-main');
 const dynamicMain = document.getElementById('dynamic-main');
@@ -9,7 +7,7 @@ function isUserLoggedIn() {
   return localStorage.getItem('loggedIn') === "true";
 }
 
-// Відкрити модальне вікно логіну (імітовано клік на кнопку логіну)
+// Відкрити модальне вікно логіну (імітація кліку на кнопку логіну)
 function openLoginModal() {
   document.getElementById('login-button')?.click();
 }
@@ -81,8 +79,22 @@ navButtons.forEach(link => {
         fundraisersMain.classList.add('hidden');
         window.scrollTo(0, 0);
 
-        // Якщо це сторінка профілю — завантажуємо дані користувача
+        // Якщо це сторінка профілю — чекаємо появи елементів і завантажуємо дані
         if (page === 'user-profile') {
+          const waitForProfileElements = () => new Promise(resolve => {
+            const interval = setInterval(() => {
+              if (
+                document.getElementById("profile-name") &&
+                document.getElementById("profile-email") &&
+                document.getElementById("profile-role")
+              ) {
+                clearInterval(interval);
+                resolve();
+              }
+            }, 50);
+          });
+
+          await waitForProfileElements();
           await loadUserProfile();
         }
 
