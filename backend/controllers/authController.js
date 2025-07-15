@@ -32,4 +32,39 @@
     }
   };
 
-  module.exports = { registerUser };
+  const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const userResult = await pool.query(
+      'SELECT * FROM "user" WHERE email = $1',
+      [email]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ message: 'Користувача не знайдено' });
+    }
+
+    const user = userResult.rows[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Невірний пароль' });
+    }
+
+    res.status(200).json({
+      message: 'Вхід успішний',
+      user: {
+        id: user.user_id,
+        full_name: user.full_name,
+        email: user.email,
+        role_id: user.role_id,
+      }
+    });
+  } catch (err) {
+    console.error('Помилка під час входу:', err);
+    res.status(500).json({ message: 'Помилка сервера' });
+  }
+};
+
+  module.exports = { registerUser, loginUser };
