@@ -163,13 +163,17 @@
     justify-content: center;
     position: absolute;
     width: 145px;
-    height: 77px;
+    min-height: 44px;
     padding: 15px 0;
     border-radius: 10px;
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.25);
     top: 40px;
     right: 0;
     background-color: #ffffff;
+}
+
+.request-post-card {
+    position: relative;
 }
 
 .post-dropdown-item {
@@ -215,6 +219,7 @@
         max-width: 492px;
         gap: 2px;
         margin-top: 8px;
+        text-align: center;
     }
 
     .edit-profile-button {

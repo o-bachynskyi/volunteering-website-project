@@ -10,6 +10,7 @@ document.addEventListener('click', function (e) {
 
                 document.getElementById('profile-title').value = name;
                 document.getElementById('profile-text').value = description;
+                document.getElementById('profile-text').dispatchEvent(new Event('input', { bubbles: true }));
                 document.querySelector('#edit-profile-form .profile-picture').src = profileImage;
 
                 const modalTagsContainer = document.querySelector('#edit-profile-form #user-profile-tags');

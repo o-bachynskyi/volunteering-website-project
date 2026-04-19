@@ -1,0 +1,49 @@
+.accepted-requests-page {
+    padding-top: 12px;
+}
+
+.accepted-requests-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.accepted-requests-heading {
+    font-size: 22px;
+    color: #1c1c1c;
+}
+
+.accepted-requests-subtitle {
+    max-width: 760px;
+    margin: 0 auto;
+    font-size: 16px;
+    color: #5f5f5f;
+    line-height: 1.45;
+}
+
+.accepted-requests-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.accepted-requests-empty {
+    background-color: #f0f0f0;
+    border-radius: 30px;
+    padding: 28px;
+    margin-top: 24px;
+    text-align: center;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.accepted-requests-empty-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.accepted-requests-empty-text {
+    font-size: 16px;
+    color: #5f5f5f;
+}

@@ -271,10 +271,12 @@ function showAuthenticatedUI() {
   const loginButton = document.getElementById("login-button");
   const addPostButton = document.getElementById("add-post-button");
   const profileButton = document.getElementById("profile-button");
+  const acceptedRequestsButton = document.getElementById("accepted-requests-div");
 
   loginButton?.classList.add("hidden");
   addPostButton?.classList.remove("hidden");
   profileButton?.classList.remove("hidden");
+  acceptedRequestsButton?.classList.remove("hidden");
 }
 
 async function loadUserProfile() {

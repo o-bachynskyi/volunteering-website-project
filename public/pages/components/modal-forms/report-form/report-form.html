@@ -1,0 +1,22 @@
+<div class="modal-overlay hidden" id="modal-overlay"></div>
+<div class="report-modal-window hidden" id="report-modal">
+    <button type="button" class="close-modal-button" aria-label="Закрити вікно">
+        <img src="/public/images/close-modal-icon.png" alt="Close window">
+    </button>
+    <h1 class="modal-heading" id="report-form-heading">Звіт</h1>
+    <form class="form active-modal" id="request-report-form">
+        <div class="report-text-input report-description">
+            <label for="report-text" class="input-title">Текст звіту</label>
+            <div class="textarea-wrapper">
+                <textarea id="report-text" name="report-text" class="report-textarea" required></textarea>
+                <div class="image-container" id="report-image-preview-container"></div>
+                <hr class="textarea-divider">
+                <label for="report-image-upload" class="image-upload-icon" title="Додати фото">
+                    <img src="/public/images/image-icon.png" alt="Додати фото">
+                </label>
+                <input type="file" class="image-upload" id="report-image-upload" accept="image/*" multiple hidden>
+            </div>
+        </div>
+        <button type="submit" class="submit-button">Надіслати звіт</button>
+    </form>
+</div>

@@ -5,7 +5,6 @@
             <div class="profile-text">
                 <p class="profile-name">Олег</p>
                 <p class="profile-role">Волонтер</p>
-                <p class="profile-email">oleg@gmail.com</p>
             </div>
             <div class="profile-tags" id="user-profile-tags">
                 <div class="profile-tag">
@@ -38,7 +37,8 @@
 </div>
 <div class="profile-posts">
     <h2 class="profile-posts-heading">Дописи</h2>
-    <article class="post">
+    <div id="generated-profile-posts"></div>
+    <article class="post" data-owned-post-id="profile-fundraising-static">
         <header class="post-header">
             <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" alt="User Profile Picture"
                 class="post-profile-pic">
@@ -57,7 +57,7 @@
                         <img src="/public/images/edit-icon.png" alt="edit post">
                         Редагувати
                     </button>
-                    <button class="post-dropdown-item" id="post-delete-button">
+                    <button class="post-dropdown-item delete-own-post-button">
                         <img src="/public/images/delete-icon.png" alt="delete post">
                         Видалити
                     </button>
@@ -65,10 +65,74 @@
             </div>
         </header>
         <div class="post-content">
+            <div class="profile-tags">
+                <div class="profile-tag">
+                    <p class="profile-tag-title">Гуманітарна допомога</p>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">Логістика</p>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">Збір коштів</p>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">Медикаменти</p>
+                </div>
+            </div>
             <h2 class="post-title">Терміновий збір для гуманітарної допомоги.</h2>
             <p class="post-description">Ми збираємо кошти на продукти, засоби гігієни та медикаменти для мешканців прифронтових сіл. Кожна ваша гривня — це реальна допомога. Долучайтесь!</p>
             <section class="post-photos">
                 <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" alt="post photo" class="photo">
+            </section>
+        </div>
+    </article>
+    <article class="post request-post-card" data-request-id="profile-request-medical" data-owned-post-id="profile-request-medical" data-request-status="open" data-request-context="author">
+        <header class="post-header">
+            <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg" alt="User Profile Picture"
+                class="post-profile-pic">
+            <div class="post-data">
+                <div class="user-info">
+                    <p class="name">Олег</p>
+                    <p class="dot">•</p>
+                    <time datetime="2025-07-06T14:00:00" class="post-date">сьогодні</time>
+                </div>
+                <p class="user-role">Волонтер</p>
+                <p class="request-status is-open">Відкритий</p>
+                <button class="post-more-button">
+                    <img src="/public/images/more-icon.png" alt="more">
+                </button>
+                <div class="post-more-dropdown hidden">
+                    <button class="post-dropdown-item edit-post-button">
+                        <img src="/public/images/edit-icon.png" alt="edit post">
+                        Редагувати
+                    </button>
+                    <button class="post-dropdown-item close-request-button" data-report-role="author">
+                        <img src="/public/images/close-modal-icon.png" alt="close request">
+                        Закрити
+                    </button>
+                    <button class="post-dropdown-item delete-own-post-button">
+                        <img src="/public/images/delete-icon.png" alt="delete post">
+                        Видалити
+                    </button>
+                </div>
+            </div>
+        </header>
+        <div class="post-content">
+            <div class="profile-tags">
+                <div class="profile-tag">
+                    <p class="profile-tag-title">Медицина</p>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">Аптечки</p>
+                </div>
+                <div class="profile-tag">
+                    <p class="profile-tag-title">Терміново</p>
+                </div>
+            </div>
+            <h2 class="post-title">Потрібні тактичні аптечки для евакуаційної групи</h2>
+            <p class="post-description">Шукаємо допомогу з аптечками IFAK та базовим медичним наповненням для групи евакуації. Після отримання допомоги запит можна буде закрити через форму звіту.</p>
+            <section class="post-photos">
+                <img src="/public/images/account-icon.png" alt="post photo" class="photo">
             </section>
         </div>
     </article>

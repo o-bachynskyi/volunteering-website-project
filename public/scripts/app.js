@@ -1,6 +1,14 @@
 const searchInput = document.querySelector('.search-input');
 const tagsContainer = document.querySelector('.tags-container');
 
+function isLoggedIn() {
+  return localStorage.getItem('loggedIn') === 'true';
+}
+
+function openLoginPrompt() {
+  document.getElementById('login-button')?.click();
+}
+
 // Show on focus
 searchInput.addEventListener('focus', () => {
   tagsContainer.classList.remove('hidden');
@@ -53,9 +61,20 @@ document.addEventListener('click', () => {
 //
 
 document.addEventListener('click', (e) => {
+  const authRequiredTarget = e.target.closest(
+    '.answer-request-button, .post-more-button, .edit-post-button, .close-request-button, .delete-own-post-button, .delete-accepted-request-button, .edit-profile-button'
+  );
+
+  if (authRequiredTarget && !isLoggedIn()) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    openLoginPrompt();
+    return;
+  }
+
   const closeBtn = e.target.closest('.close-modal-button');
   if (closeBtn) {
-    const modal = closeBtn.closest('.modal-window, .post-modal-window, .edit-profile-modal-window, .answer-request-modal-window');
+    const modal = closeBtn.closest('.modal-window, .post-modal-window, .edit-profile-modal-window, .answer-request-modal-window, .report-modal-window');
     const overlay = document.getElementById('modal-overlay');
     if (modal) {
       modal.classList.add('hidden');
@@ -75,7 +94,7 @@ document.addEventListener('click', (e) => {
       if (tags) tags.innerHTML = '';
 
       // 3. Clear image preview container
-      const images = modal.querySelector('#post-image-preview-container, #answer-image-preview-container');
+      const images = modal.querySelector('#post-image-preview-container, #answer-image-preview-container, #report-image-preview-container');
       if (images) images.innerHTML = '';
     }
     if (overlay) overlay.classList.add('hidden');
@@ -186,3 +205,128 @@ document.addEventListener('click', (e) => {
   }
 });
 
+function createPostTagElement(tagValue) {
+  const tagEl = document.createElement('div');
+  tagEl.classList.add('post-tag');
+
+  const tagTitle = document.createElement('p');
+  tagTitle.classList.add('post-tag-title');
+  tagTitle.textContent = tagValue;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.classList.add('close');
+
+  const closeIcon = document.createElement('img');
+  closeIcon.src = '/public/images/close-icon.png';
+  closeIcon.alt = 'Видалити тег';
+
+  closeBtn.appendChild(closeIcon);
+  tagEl.appendChild(tagTitle);
+  tagEl.appendChild(closeBtn);
+
+  return tagEl;
+}
+
+function createSearchTagElement(tagValue) {
+  const tagEl = document.createElement('div');
+  tagEl.classList.add('tag');
+
+  const tagTitle = document.createElement('p');
+  tagTitle.classList.add('tag-title');
+  tagTitle.textContent = tagValue;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.classList.add('close');
+
+  const closeIcon = document.createElement('img');
+  closeIcon.src = '/public/images/close-icon.png';
+  closeIcon.alt = 'Видалити тег';
+
+  closeBtn.appendChild(closeIcon);
+  tagEl.appendChild(tagTitle);
+  tagEl.appendChild(closeBtn);
+
+  return tagEl;
+}
+
+function addTagToContainer(input, tagsContainer, createTagElement) {
+  const tagValue = input.value.trim();
+  if (!tagValue) return;
+
+  const exists = Array.from(tagsContainer.querySelectorAll('.post-tag-title, .tag-title'))
+    .some(tag => tag.textContent.trim().toLowerCase() === tagValue.toLowerCase());
+
+  if (exists) {
+    input.value = '';
+    return;
+  }
+
+  tagsContainer.appendChild(createTagElement(tagValue));
+  input.value = '';
+}
+
+function addPostTagFromInput(input) {
+  const form = input.closest('form');
+  const tagsContainer = form?.querySelector('.post-tags');
+  if (!form || !tagsContainer) return;
+
+  addTagToContainer(input, tagsContainer, createPostTagElement);
+}
+
+function addSearchTagFromInput(input) {
+  const tagsContainer = document.querySelector('.tags-list');
+  if (!tagsContainer) return;
+
+  addTagToContainer(input, tagsContainer, createSearchTagElement);
+}
+
+document.addEventListener('click', (e) => {
+  const addTagButton = e.target.closest('.add-tag-button');
+  if (addTagButton) {
+    const input = addTagButton.closest('.post-tags-entry-row')?.querySelector('input[name="post-tags"]');
+    if (input) {
+      addPostTagFromInput(input);
+      input.focus();
+    }
+    return;
+  }
+
+  const searchAddTagButton = e.target.closest('.search-add-tag-button');
+  if (!searchAddTagButton) return;
+
+  const input = searchAddTagButton.closest('.tags-input-wrapper')?.querySelector('.tags-input');
+  if (input) {
+    addSearchTagFromInput(input);
+    input.focus();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+
+  const postTagInput = e.target.closest('input[name="post-tags"]');
+  if (postTagInput) {
+    e.preventDefault();
+    addPostTagFromInput(postTagInput);
+    return;
+  }
+
+  const searchTagInput = e.target.closest('.tags-input');
+  if (searchTagInput) {
+    e.preventDefault();
+    addSearchTagFromInput(searchTagInput);
+  }
+});
+
+function validatePassword() {
+  const password = document.getElementById("password-registration");
+  const confirm = document.getElementById("password-confirmation");
+
+  if (confirm.value !== password.value) {
+    confirm.setCustomValidity("Паролі не збігаються");
+  } else {
+    confirm.setCustomValidity(""); // Clear the error to allow submission
+  }
+}

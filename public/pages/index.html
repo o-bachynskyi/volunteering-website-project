@@ -11,8 +11,10 @@
     <link rel="stylesheet" href="/public/pages/components/user-profile-main/user-profile.css">
     <link rel="stylesheet" href="/public/pages/components/modal-forms/add-edit-post-form/add-edit-post.css">
     <link rel="stylesheet" href="/public/pages/components/requests-main/requests.css">
+    <link rel="stylesheet" href="/public/pages/components/accepted-requests-main/accepted-requests.css">
     <link rel="stylesheet" href="/public/pages/components/modal-forms/edit-profile-form/edit-profile.css">
     <link rel="stylesheet" href="/public/pages/components/modal-forms/answer-request-form/answer-request.css">
+    <link rel="stylesheet" href="/public/pages/components/modal-forms/report-form/report-form.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
 </head>
 
@@ -30,48 +32,11 @@
                     <div class="tags-input-wrapper">
                         <img src="/public/images/tags-icon.png" alt="tags icon" class="tags-icon" />
                         <input type="text" class="tags-input" placeholder="Додати теги" />
+                        <button type="button" class="search-add-tag-button" aria-label="Додати тег">
+                            <img src="/public/images/add-icon.png" alt="add tag" />
+                        </button>
                     </div>
                     <div class="tags-list">
-                        <div class="tag">
-                            <p class="tag-title">Гуманітарна допомога</p>
-                            <button type="button" class="close">
-                                <img src="/public/images/close-icon.png" />
-                            </button>
-                        </div>
-                        <div class="tag">
-                            <p class="tag-title">Для військових</p>
-                            <button type="button" class="close">
-                                <img src="/public/images/close-icon.png" />
-                            </button>
-                        </div>
-                        <div class="tag">
-                            <p class="tag-title">
-                                Медицина</p>
-                            <button type="button" class="close">
-                                <img src="/public/images/close-icon.png" />
-                            </button>
-                        </div>
-                        <div class="tag">
-                            <p class="tag-title">
-                                Одяг</p>
-                            <button type="button" class="close">
-                                <img src="/public/images/close-icon.png" />
-                            </button>
-                        </div>
-                        <div class="tag">
-                            <p class="tag-title">
-                                Збір коштів</p>
-                            <button type="button" class="close">
-                                <img src="/public/images/close-icon.png" />
-                            </button>
-                        </div>
-                        <div class="tag">
-                            <p class="tag-title">
-                                Бронежилети</p>
-                            <button type="button" class="close">
-                                <img src="/public/images/close-icon.png" />
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -108,6 +73,10 @@
                     <img src="/public/images/help-icon.png" alt="Help Requests icon">
                     <a href="/public/requests.html" data-page="requests">Запити на допомогу</a>
                 </div>
+                <div class="nav-button hidden" id="accepted-requests-div">
+                    <img src="/public/images/accepted-requests.png" alt="Accepted requests icon">
+                    <a href="/public/accepted-requests.html" data-page="accepted-requests">Прийняті запити</a>
+                </div>
                 <div class="nav-button" id="military-div">
                     <img src="/public/images/soldier-icon.png" alt="Military icon">
                     <a href="/public/military.html" data-page="military">Військові</a>
@@ -123,7 +92,8 @@
         </aside>
         <main>
             <div id="fundraisers-main">
-                <article class="post">
+                <div id="generated-fundraiser-posts"></div>
+                <article class="post" data-owned-post-id="profile-fundraising-static">
                     <header class="post-header">
                         <img src="/public/images/premium_photo-1689568126014-06fea9d5d341.jpg"
                             alt="User Profile Picture" class="post-profile-pic">
@@ -137,6 +107,20 @@
                         </div>
                     </header>
                     <div class="post-content">
+                        <div class="profile-tags">
+                            <div class="profile-tag">
+                                <p class="profile-tag-title">Гуманітарна допомога</p>
+                            </div>
+                            <div class="profile-tag">
+                                <p class="profile-tag-title">Продукти</p>
+                            </div>
+                            <div class="profile-tag">
+                                <p class="profile-tag-title">Медикаменти</p>
+                            </div>
+                            <div class="profile-tag">
+                                <p class="profile-tag-title">Прифронтові села</p>
+                            </div>
+                        </div>
                         <h2 class="post-title">Терміновий збір для гуманітарної допомоги.</h2>
                         <p class="post-description">Ми збираємо продукти, засоби гігієни та медикаменти для мешканців прифронтових сіл. 
                             Кожна ваша гривня — це реальна допомога. Долучайтесь!</p>
@@ -160,6 +144,20 @@
                         </div>
                     </header>
                     <div class="post-content">
+                        <div class="profile-tags">
+                            <div class="profile-tag">
+                                <p class="profile-tag-title">Для військових</p>
+                            </div>
+                            <div class="profile-tag">
+                                <p class="profile-tag-title">Тепловізори</p>
+                            </div>
+                            <div class="profile-tag">
+                                <p class="profile-tag-title">Техніка</p>
+                            </div>
+                            <div class="profile-tag">
+                                <p class="profile-tag-title">Збір коштів</p>
+                            </div>
+                        </div>
                         <h2 class="post-title">Допомога для військових: збір на тепловізори</h2>
                         <p class="post-description">Розпочато збір коштів на тепловізори для військового підрозділу. Будь-який внесок наближає перемогу. Дякуємо кожному, хто долучається!</p>
                         <section class="post-photos">
@@ -177,5 +175,6 @@
     <script src="/public/scripts/edit-profile-fill.js"></script>
     <script src="/public/scripts/edit-post-fill.js"></script>
     <script type="module" src="/public/scripts/modals.js"></script>
+    <script src="/public/scripts/request-flow.js"></script>
 </body>
 </html>

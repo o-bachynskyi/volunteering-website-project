@@ -2,11 +2,15 @@
     display: flex;
     font-weight: bold;
     justify-content: space-between;
+    position: relative;
+    align-items: center;
 }
 
 .request-post-header-left {
     display: flex;
     align-items: center;
+    min-width: 0;
+    padding-right: 12px;
 }
 
 .request-post-header .post-profile-pic {
@@ -17,6 +21,50 @@
     margin-right: 12px;
 }
 
+.request-status {
+    margin: 2px 0 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.request-status.is-open {
+    color: #249a3d;
+}
+
+.request-status.is-closed {
+    color: #7a7a7a;
+}
+
+.post[data-request-status="closed"] .answer-request-button {
+    display: none;
+}
+
+.request-post-header > .answer-request-button,
+.request-post-header > .accepted-request-actions {
+    margin-left: auto;
+}
+
+.request-post-header > .accepted-request-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.request-post-header.has-owner-actions {
+    padding-right: 44px;
+}
+
+.answer-request-button.is-accepted {
+    background-color: #d9d9d9;
+    color: #5f5f5f;
+    cursor: default;
+}
+
+.answer-request-button.is-accepted:hover,
+.answer-request-button.is-accepted:active {
+    background-color: #d9d9d9;
+}
 
 .answer-request-button {
     display: flex;

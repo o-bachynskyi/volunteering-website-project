@@ -43,9 +43,10 @@
     justify-content: center;
     gap: 3px;
     font-weight: 600; 
+    font-size: 18px;
 }
 
-.user-name, .user-email {
+.user-name {
     margin: 0;
 }
 

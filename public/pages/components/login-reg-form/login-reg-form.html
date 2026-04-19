@@ -35,19 +35,23 @@
             <input type="email" id="email_registration" name="email" required>
         </div>
         <div class="text-input">
-            <label for="text" class="input-title">Ім'я / Назва</label>
-            <input type="text" id="text_registration" name="text" required>
+            <label for="username" class="input-title">Ім'я / Назва</label>
+            <input type="text" id="username_registration" name="username" required>
+        </div>
+        <div class="text-input">
+            <label for="rnokpp" class="input-title">РНОКПП</label>
+            <input type="text" id="rnokpp_registration" name="rnokpp" minlength="10" maxlength="10" pattern="[0-9]*" required>
         </div>
         <div class="text-input password-wrapper">
             <label for="password" class="input-title">Пароль</label>
-            <input type="password" id="password_registration" name="password" required>
+            <input type="password" id="password-registration" name="password" minlength="8" required>
             <button type="button" class="toggle-password" aria-label="Показати/Сховати">
                 <img src="/public/images/hidden-icon.png" alt="password hidden">
             </button>
         </div>
         <div class="text-input password-wrapper">
             <label for="password-confirmation" class="input-title">Підтвердження пароля</label>
-            <input type="password" id="password-confirmation" name="password-confirmation" required>
+            <input type="password" id="password-confirmation" name="password-confirmation" minlength="8" oninput="validatePassword()" required>
             <button type="button" class="toggle-password" aria-label="Показати/Сховати">
                 <img src="/public/images/hidden-icon.png" alt="password confirmation hidden">
             </button>

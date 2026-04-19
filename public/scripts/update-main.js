@@ -28,6 +28,7 @@ navButtons.forEach(link => {
       // Show static fundraisers
       fundraisersMain.classList.remove('hidden');
       dynamicMain.innerHTML = ''; // Remove previously injected page
+      document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page } }));
       window.scrollTo(0, 0);
     } else {
       // Load and show dynamic page
@@ -36,6 +37,7 @@ navButtons.forEach(link => {
         if (!res.ok) throw new Error("Page not found");
         const html = await res.text();
         dynamicMain.innerHTML = html;
+        document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page } }));
 
         // Hide fundraisers
         fundraisersMain.classList.add('hidden');
@@ -52,10 +54,12 @@ navButtons.forEach(link => {
 
 // Load saved page on initial load
 window.addEventListener('DOMContentLoaded', () => {
+  const isLoggedIn = localStorage.getItem('loggedIn') === 'true';
   const savedPage = localStorage.getItem('selectedPage') || 'fundraisers';
-  let linkToClick = document.querySelector(`.nav-button a[data-page="${savedPage}"]`);
+  const initialPage = !isLoggedIn && savedPage === 'accepted-requests' ? 'fundraisers' : savedPage;
+  let linkToClick = document.querySelector(`.nav-button a[data-page="${initialPage}"]`);
 
-  if (!linkToClick && savedPage === 'user-profile') {
+  if (!linkToClick && initialPage === 'user-profile') {
     linkToClick = document.getElementById('open-profile-button');
   }
 

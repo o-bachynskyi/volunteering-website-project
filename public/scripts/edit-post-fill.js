@@ -12,14 +12,44 @@ document.addEventListener('click', function (e) {
             // Отримання заголовку та опису поста
             const title = postArticle.querySelector('.post-title')?.textContent.trim() || '';
             const text = postArticle.querySelector('.post-description')?.textContent.trim() || '';
+            const tags = Array.from(postArticle.querySelectorAll('.profile-tag-title, .post-tag-title'))
+                .map(tag => tag.textContent.trim())
+                .filter(Boolean);
 
-            // Припускаємо, що пост за замовчуванням має тип "fundraising"
+            // Визначаємо тип поста по наявності request-атрибутів
             const typeSelect = document.querySelector('#edit-post-form select[name="type"]');
-            typeSelect.value = "fundraising"; // або зробити логіку детекції, якщо треба
+            typeSelect.value = postArticle.dataset.requestId ? 'request' : 'fundraising';
 
             // Заповнення заголовку та опису
             document.querySelector('#edit-post-form #post-title').value = title;
             document.querySelector('#edit-post-text').value = text;
+
+            const editTagsContainer = document.querySelector('#edit-post-form #user-post-tags');
+            if (editTagsContainer) {
+                editTagsContainer.innerHTML = '';
+
+                tags.forEach(tagValue => {
+                    const tagEl = document.createElement('div');
+                    tagEl.classList.add('post-tag');
+
+                    const tagTitle = document.createElement('p');
+                    tagTitle.classList.add('post-tag-title');
+                    tagTitle.textContent = tagValue;
+
+                    const closeBtn = document.createElement('button');
+                    closeBtn.type = 'button';
+                    closeBtn.classList.add('close');
+
+                    const closeIcon = document.createElement('img');
+                    closeIcon.src = '/public/images/close-icon.png';
+                    closeIcon.alt = 'Видалити тег';
+
+                    closeBtn.appendChild(closeIcon);
+                    tagEl.appendChild(tagTitle);
+                    tagEl.appendChild(closeBtn);
+                    editTagsContainer.appendChild(tagEl);
+                });
+            }
 
             // Очищення контейнера зображень
             const imageContainer = document.querySelector('#edit-post-image-preview-container');
