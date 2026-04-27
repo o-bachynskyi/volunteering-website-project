@@ -2,44 +2,20 @@ const navButtons = document.querySelectorAll('.nav-button a, #open-profile-butto
 const fundraisersMain = document.getElementById('fundraisers-main');
 const dynamicMain = document.getElementById('dynamic-main');
 
-// Перевірка, чи користувач залогінений
 function isUserLoggedIn() {
-  return localStorage.getItem('loggedIn') === "true";
+  return Boolean(window.AuthState?.isLoggedIn());
 }
 
-// Відкрити модальне вікно логіну (імітація кліку на кнопку логіну)
 function openLoginModal() {
   document.getElementById('login-button')?.click();
 }
 
-// Функція для завантаження даних профілю користувача та вставки їх у DOM
-async function loadUserProfile() {
-  const userId = localStorage.getItem("userId");
-  if (!userId) return;
-
-  try {
-    const res = await fetch(`/auth/profile?id=${userId}`);
-    const result = await res.json();
-
-    if (res.ok) {
-      const { full_name, email, role } = result.user || result;
-
-      const nameEl = document.getElementById("profile-name");
-      const emailEl = document.getElementById("profile-email");
-      const roleEl = document.getElementById("profile-role");
-
-      if (nameEl) nameEl.textContent = full_name || "Нема імені";
-      if (emailEl) emailEl.textContent = email || "Нема email";
-      if (roleEl) roleEl.textContent = role || "Нема ролі";
-    } else {
-      console.error(result.message || "Не вдалося отримати профіль");
-    }
-  } catch (err) {
-    console.error("Помилка при завантаженні профілю:", err);
-  }
+async function hydrateProfilePage() {
+  await window.AuthState?.refresh();
+  window.AuthState?.renderUserProfile();
 }
 
-navButtons.forEach(link => {
+navButtons.forEach((link) => {
   link.addEventListener('click', async (e) => {
     e.preventDefault();
 
@@ -50,13 +26,13 @@ navButtons.forEach(link => {
 
       if (!isUserLoggedIn()) {
         openLoginModal();
-        return; // Забороняємо завантаження профілю без логіну
+        return;
       }
     }
 
     localStorage.setItem('selectedPage', page);
 
-    document.querySelectorAll('.nav-button').forEach(btn => {
+    document.querySelectorAll('.nav-button').forEach((btn) => {
       btn.classList.remove('active');
     });
 
@@ -66,66 +42,70 @@ navButtons.forEach(link => {
 
     if (page === 'fundraisers') {
       fundraisersMain.classList.remove('hidden');
-      dynamicMain.innerHTML = ''; // Remove previously injected page
+      dynamicMain.innerHTML = '';
       document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page } }));
       window.scrollTo(0, 0);
-    } else {
-      try {
-        const res = await fetch(`/public/pages/components/${page}-main/${page}.html`);
-        if (!res.ok) throw new Error("Page not found");
+      return;
+    }
 
-        const html = await res.text();
-        dynamicMain.innerHTML = html;
-        document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page } }));
-
-        fundraisersMain.classList.add('hidden');
-        window.scrollTo(0, 0);
-
-        // Якщо це сторінка профілю — чекаємо появи елементів і завантажуємо дані
-        if (page === 'user-profile') {
-          const waitForProfileElements = () => new Promise(resolve => {
-            const interval = setInterval(() => {
-              if (
-                document.getElementById("profile-name") &&
-                document.getElementById("profile-email") &&
-                document.getElementById("profile-role")
-              ) {
-                clearInterval(interval);
-                resolve();
-              }
-            }, 50);
-          });
-
-          await waitForProfileElements();
-          await loadUserProfile();
-        }
-
-      } catch (err) {
-        dynamicMain.innerHTML = "<p style='padding: 1rem;'>Помилка завантаження сторінки.</p>";
-        fundraisersMain.classList.add('hidden');
-        console.error(err);
+    try {
+      const res = await fetch(`/public/pages/components/${page}-main/${page}.html`);
+      if (!res.ok) {
+        throw new Error('Page not found');
       }
+
+      const html = await res.text();
+      dynamicMain.innerHTML = html;
+      document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page } }));
+
+      fundraisersMain.classList.add('hidden');
+      window.scrollTo(0, 0);
+
+      if (page === 'user-profile') {
+        await hydrateProfilePage();
+      }
+    } catch (error) {
+      dynamicMain.innerHTML = "<p style='padding: 1rem;'>Помилка завантаження сторінки.</p>";
+      fundraisersMain.classList.add('hidden');
+      console.error(error);
     }
   });
 });
 
-window.addEventListener('DOMContentLoaded', () => {
-  const isLoggedIn = localStorage.getItem('loggedIn') === 'true';
+window.addEventListener('DOMContentLoaded', async () => {
+  await window.AuthState?.init();
+
   const savedPage = localStorage.getItem('selectedPage') || 'fundraisers';
-  const initialPage = !isLoggedIn && savedPage === 'accepted-requests' ? 'fundraisers' : savedPage;
+  const initialPage = !isUserLoggedIn() && savedPage === 'accepted-requests'
+    ? 'fundraisers'
+    : savedPage;
   let linkToClick = document.querySelector(`.nav-button a[data-page="${initialPage}"]`);
 
   if (!linkToClick && initialPage === 'user-profile') {
     linkToClick = document.getElementById('open-profile-button');
   }
 
-  if (savedPage === 'user-profile' && !isUserLoggedIn()) {
-    openLoginModal();
-    return;
+  if (initialPage === 'user-profile' && !isUserLoggedIn()) {
+    localStorage.setItem('selectedPage', 'fundraisers');
+    linkToClick = document.querySelector('.nav-button a[data-page="fundraisers"]');
   }
 
   if (linkToClick) {
     window.scrollTo(0, 0);
     linkToClick.click();
+  }
+});
+
+document.addEventListener('auth:changed', async (event) => {
+  if (!event.detail.authenticated) {
+    if (localStorage.getItem('selectedPage') === 'user-profile') {
+      localStorage.setItem('selectedPage', 'fundraisers');
+      document.querySelector('.nav-button a[data-page="fundraisers"]')?.click();
+    }
+    return;
+  }
+
+  if (document.querySelector('.user-profile')) {
+    await hydrateProfilePage();
   }
 });

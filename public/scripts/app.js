@@ -2,7 +2,7 @@ const searchInput = document.querySelector('.search-input');
 const tagsContainer = document.querySelector('.tags-container');
 
 function isLoggedIn() {
-  return localStorage.getItem('loggedIn') === 'true';
+  return Boolean(window.AuthState?.isLoggedIn());
 }
 
 function openLoginPrompt() {
