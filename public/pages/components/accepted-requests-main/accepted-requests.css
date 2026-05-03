@@ -1,12 +1,12 @@
 .accepted-requests-page {
-    padding-top: 12px;
+    padding-top: 16px;
 }
 
 .accepted-requests-header {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-bottom: 8px;
+    margin-bottom: 16px;
     text-align: center;
 }
 
@@ -26,13 +26,17 @@
 .accepted-requests-list {
     display: flex;
     flex-direction: column;
+    gap: 25px;
+}
+
+.accepted-requests-list > .post {
+    margin: 0;
 }
 
 .accepted-requests-empty {
     background-color: #f0f0f0;
     border-radius: 30px;
     padding: 28px;
-    margin-top: 24px;
     text-align: center;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
 }

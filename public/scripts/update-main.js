@@ -76,7 +76,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   await window.AuthState?.init();
 
   const savedPage = localStorage.getItem('selectedPage') || 'fundraisers';
-  const initialPage = !isUserLoggedIn() && savedPage === 'accepted-requests'
+  const protectedPages = new Set(['accepted-requests', 'reports']);
+  const initialPage = !isUserLoggedIn() && protectedPages.has(savedPage)
     ? 'fundraisers'
     : savedPage;
   let linkToClick = document.querySelector(`.nav-button a[data-page="${initialPage}"]`);

@@ -9,6 +9,10 @@ function openLoginPrompt() {
   document.getElementById('login-button')?.click();
 }
 
+function syncGuestUiState() {
+  document.body.classList.toggle('guest-user', !isLoggedIn());
+}
+
 // Show on focus
 searchInput.addEventListener('focus', () => {
   tagsContainer.classList.remove('hidden');
@@ -62,7 +66,7 @@ document.addEventListener('click', () => {
 
 document.addEventListener('click', (e) => {
   const authRequiredTarget = e.target.closest(
-    '.answer-request-button, .post-more-button, .edit-post-button, .close-request-button, .delete-own-post-button, .delete-accepted-request-button, .edit-profile-button'
+    '.answer-request-button, .post-more-button, .edit-post-button, .close-request-button, .delete-own-post-button, .delete-accepted-request-button, .edit-profile-button, .view-report-button, .export-report-button'
   );
 
   if (authRequiredTarget && !isLoggedIn()) {
@@ -330,3 +334,7 @@ function validatePassword() {
     confirm.setCustomValidity(""); // Clear the error to allow submission
   }
 }
+
+syncGuestUiState();
+document.addEventListener('auth:changed', syncGuestUiState);
+document.addEventListener('page:loaded', syncGuestUiState);

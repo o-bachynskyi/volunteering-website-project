@@ -201,6 +201,11 @@
     display: none !important;
 }
 
+.guest-user .post-more-button,
+.guest-user .accepted-request-actions {
+    display: none !important;
+}
+
 .button-container {
     display: flex;
     gap: 15px;

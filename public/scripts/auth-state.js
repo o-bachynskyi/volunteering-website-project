@@ -1,6 +1,6 @@
 (function attachAuthState() {
   const defaultAvatar = '/public/images/account-icon.png';
-  const protectedPages = new Set(['accepted-requests', 'user-profile']);
+  const protectedPages = new Set(['accepted-requests', 'reports', 'user-profile']);
   const state = {
     authenticated: false,
     user: null,
@@ -37,6 +37,8 @@
     document.getElementById('add-post-button')?.classList.toggle('hidden', !state.authenticated);
     document.getElementById('profile-button')?.classList.toggle('hidden', !state.authenticated);
     document.getElementById('accepted-requests-div')?.classList.toggle('hidden', !state.authenticated);
+    document.getElementById('reports-div')?.classList.toggle('hidden', !state.authenticated);
+    document.body.classList.toggle('guest-user', !state.authenticated);
 
     if (!state.authenticated) {
       document.getElementById('profile-dropdown')?.classList.add('hidden');
