@@ -1,79 +1,82 @@
-document.addEventListener('click', function (e) {
-    const editButton = e.target.closest('.edit-post-button');
-    if (!editButton) return;
+function escapeHtml(text = '') {
+  return String(text)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
-    // Шукаємо контейнер поста
-    const postArticle = editButton.closest('.post');
-    if (!postArticle) return;
+document.addEventListener('click', (event) => {
+  const editButton = event.target.closest('.edit-post-button');
+  if (!editButton) return;
 
-    // Затримка, щоб переконатись що модальне вікно вже з'явилось у DOM
-    setTimeout(() => {
-        try {
-            // Отримання заголовку та опису поста
-            const title = postArticle.querySelector('.post-title')?.textContent.trim() || '';
-            const text = postArticle.querySelector('.post-description')?.textContent.trim() || '';
-            const tags = Array.from(postArticle.querySelectorAll('.profile-tag-title, .post-tag-title'))
-                .map(tag => tag.textContent.trim())
-                .filter(Boolean);
+  const postArticle = editButton.closest('.post');
+  if (!postArticle) return;
 
-            // Визначаємо тип поста по наявності request-атрибутів
-            const typeSelect = document.querySelector('#edit-post-form select[name="type"]');
-            typeSelect.value = postArticle.dataset.requestId ? 'request' : 'fundraising';
+  setTimeout(() => {
+    try {
+      const form = document.getElementById('edit-post-form');
+      if (!form) {
+        return;
+      }
 
-            // Заповнення заголовку та опису
-            document.querySelector('#edit-post-form #post-title').value = title;
-            document.querySelector('#edit-post-text').value = text;
+      const title = postArticle.querySelector('.post-title')?.textContent.trim() || '';
+      const text = postArticle.querySelector('.post-description')?.textContent.trim() || '';
+      const tags = Array.from(postArticle.querySelectorAll('.profile-tag-title, .post-tag-title'))
+        .map((tag) => tag.textContent.trim())
+        .filter(Boolean);
 
-            const editTagsContainer = document.querySelector('#edit-post-form #user-post-tags');
-            if (editTagsContainer) {
-                editTagsContainer.innerHTML = '';
+      const postId = postArticle.dataset.ownedPostId || postArticle.dataset.requestId || '';
+      const typeSelect = form.querySelector('select[name="type"]');
+      const titleInput = form.querySelector('input[name="post-title"]');
+      const textInput = form.querySelector('#edit-post-text');
+      const editTagsContainer = form.querySelector('#user-post-tags');
+      const imageContainer = form.querySelector('#edit-post-image-preview-container');
 
-                tags.forEach(tagValue => {
-                    const tagEl = document.createElement('div');
-                    tagEl.classList.add('post-tag');
+      form.dataset.postId = postId;
 
-                    const tagTitle = document.createElement('p');
-                    tagTitle.classList.add('post-tag-title');
-                    tagTitle.textContent = tagValue;
+      if (typeSelect) {
+        typeSelect.value = postArticle.dataset.requestId ? 'request' : 'fundraising';
+      }
 
-                    const closeBtn = document.createElement('button');
-                    closeBtn.type = 'button';
-                    closeBtn.classList.add('close');
+      if (titleInput) {
+        titleInput.value = title;
+      }
 
-                    const closeIcon = document.createElement('img');
-                    closeIcon.src = '/public/images/close-icon.png';
-                    closeIcon.alt = 'Видалити тег';
+      if (textInput) {
+        textInput.value = text;
+        textInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
 
-                    closeBtn.appendChild(closeIcon);
-                    tagEl.appendChild(tagTitle);
-                    tagEl.appendChild(closeBtn);
-                    editTagsContainer.appendChild(tagEl);
-                });
-            }
+      if (editTagsContainer) {
+        editTagsContainer.innerHTML = tags.map((tagValue) => `
+          <div class="post-tag">
+            <p class="post-tag-title">${escapeHtml(tagValue)}</p>
+            <button type="button" class="close">
+              <img src="/public/images/close-icon.png" alt="Видалити тег">
+            </button>
+          </div>
+        `).join('');
+      }
 
-            // Очищення контейнера зображень
-            const imageContainer = document.querySelector('#edit-post-image-preview-container');
-            imageContainer.innerHTML = '';
-
-            // Додавання зображень з поста
-            const postImages = postArticle.querySelectorAll('.post-photos img');
-            postImages.forEach(img => {
-                const wrapper = document.createElement('button');
-                wrapper.type = 'button';
-                wrapper.classList.add('remove-image-button');
-                wrapper.setAttribute('aria-label', 'Видалити');
-
-                wrapper.innerHTML = `
-                    <div class="remove-image-overlay"></div>
-                    <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
-                    <img src="${img.src}" class="added-image" alt="added-image">
-                `;
-
-                imageContainer.appendChild(wrapper);
-            });
-
-        } catch (error) {
-            console.error('Помилка при заповненні форми редагування поста:', error);
-        }
-    }, 50); // Невелика затримка після відкриття модального вікна
+      if (imageContainer) {
+        imageContainer.innerHTML = '';
+        postArticle.querySelectorAll('.post-photos img').forEach((img) => {
+          const wrapper = document.createElement('button');
+          wrapper.type = 'button';
+          wrapper.classList.add('remove-image-button');
+          wrapper.setAttribute('aria-label', 'Видалити');
+          wrapper.innerHTML = `
+            <div class="remove-image-overlay"></div>
+            <img src="/public/images/close-icon.png" class="remove-image-icon" alt="remove image">
+            <img src="${img.src}" class="added-image" alt="added-image">
+          `;
+          imageContainer.appendChild(wrapper);
+        });
+      }
+    } catch (error) {
+      console.error('Помилка при заповненні форми редагування поста:', error);
+    }
+  }, 50);
 });

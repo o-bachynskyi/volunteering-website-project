@@ -1,49 +1,65 @@
-document.addEventListener('click', function (e) {
-    // Якщо натиснута кнопка редагування профілю
-    if (e.target.closest('#edit-profile-button')) {
-        // Додати затримку, щоб переконатись, що DOM вже оновлено динамічно
-        setTimeout(() => {
-            try {
-                const name = document.querySelector('.profile-name')?.textContent.trim() || '';
-                const description = document.querySelector('.profile-description')?.textContent.trim() || '';
-                const profileImage = document.querySelector('.profile-header img')?.src || '';
+function escapeHtml(text = '') {
+  return String(text)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
-                document.getElementById('profile-title').value = name;
-                document.getElementById('profile-text').value = description;
-                document.getElementById('profile-text').dispatchEvent(new Event('input', { bubbles: true }));
-                document.querySelector('#edit-profile-form .profile-picture').src = profileImage;
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('#edit-profile-button')) {
+    return;
+  }
 
-                const modalTagsContainer = document.querySelector('#edit-profile-form #user-profile-tags');
-                modalTagsContainer.innerHTML = '';
+  setTimeout(() => {
+    try {
+      const user = window.AuthState?.getUser();
+      const form = document.getElementById('edit-profile-form');
+      if (!user || !form) {
+        return;
+      }
 
-                const originalTags = document.querySelectorAll('.user-profile .profile-tag-title');
-                originalTags.forEach(tag => {
-                    const tagValue = tag.textContent.trim();
+      const nameInput = document.getElementById('profile-title');
+      const descriptionInput = document.getElementById('profile-text');
+      const image = form.querySelector('.profile-picture');
+      const tagsContainer = form.querySelector('#user-profile-tags');
+      const tagInput = form.querySelector('#profile-tags');
+      const imageInput = document.getElementById('profile-image-upload');
 
-                    const tagEl = document.createElement('div');
-                    tagEl.classList.add('profile-tag');
+      if (nameInput) {
+        nameInput.value = user.full_name || '';
+      }
 
-                    const tagTitle = document.createElement('p');
-                    tagTitle.classList.add('profile-tag-title');
-                    tagTitle.textContent = tagValue;
+      if (descriptionInput) {
+        descriptionInput.value = user.description || '';
+        descriptionInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
 
-                    const closeBtn = document.createElement('button');
-                    closeBtn.type = 'button';
-                    closeBtn.classList.add('close');
+      if (image) {
+        image.src = user.image_url || '/public/images/account-icon.png';
+      }
 
-                    const closeIcon = document.createElement('img');
-                    closeIcon.src = '/public/images/close-icon.png';
-                    closeIcon.alt = 'Закрити';
+      if (imageInput) {
+        imageInput.value = '';
+      }
 
-                    closeBtn.appendChild(closeIcon);
-                    tagEl.appendChild(tagTitle);
-                    tagEl.appendChild(closeBtn);
+      if (tagInput) {
+        tagInput.value = '';
+      }
 
-                    modalTagsContainer.appendChild(tagEl);
-                });
-            } catch (error) {
-                console.error('Помилка при заповненні форми редагування профілю:', error);
-            }
-        }, 50); // 50 мс — достатньо для більшості випадків
+      if (tagsContainer) {
+        tagsContainer.innerHTML = (user.tags || []).map((tagValue) => `
+          <div class="profile-tag">
+            <p class="profile-tag-title">${escapeHtml(tagValue)}</p>
+            <button type="button" class="close">
+              <img src="/public/images/close-icon.png" alt="Закрити">
+            </button>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Помилка при заповненні форми редагування профілю:', error);
     }
-})
+  }, 50);
+});

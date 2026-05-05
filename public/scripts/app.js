@@ -255,6 +255,29 @@ function createSearchTagElement(tagValue) {
   return tagEl;
 }
 
+function createProfileTagElement(tagValue) {
+  const tagEl = document.createElement('div');
+  tagEl.classList.add('profile-tag');
+
+  const tagTitle = document.createElement('p');
+  tagTitle.classList.add('profile-tag-title');
+  tagTitle.textContent = tagValue;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.classList.add('close');
+
+  const closeIcon = document.createElement('img');
+  closeIcon.src = '/public/images/close-icon.png';
+  closeIcon.alt = 'Видалити тег';
+
+  closeBtn.appendChild(closeIcon);
+  tagEl.appendChild(tagTitle);
+  tagEl.appendChild(closeBtn);
+
+  return tagEl;
+}
+
 function addTagToContainer(input, tagsContainer, createTagElement) {
   const tagValue = input.value.trim();
   if (!tagValue) return;
@@ -284,6 +307,14 @@ function addSearchTagFromInput(input) {
   if (!tagsContainer) return;
 
   addTagToContainer(input, tagsContainer, createSearchTagElement);
+}
+
+function addProfileTagFromInput(input) {
+  const form = input.closest('form');
+  const tagsContainer = form?.querySelector('#user-profile-tags');
+  if (!form || !tagsContainer) return;
+
+  addTagToContainer(input, tagsContainer, createProfileTagElement);
 }
 
 document.addEventListener('click', (e) => {
@@ -321,6 +352,41 @@ document.addEventListener('keydown', (e) => {
   if (searchTagInput) {
     e.preventDefault();
     addSearchTagFromInput(searchTagInput);
+    return;
+  }
+
+  const profileTagInput = e.target.closest('#profile-tags');
+  if (profileTagInput) {
+    e.preventDefault();
+    addProfileTagFromInput(profileTagInput);
+  }
+});
+
+document.addEventListener('change', (e) => {
+  const profileImageInput = e.target.closest('#profile-image-upload');
+  if (profileImageInput?.files?.[0]) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const image = document.querySelector('#edit-profile-form .profile-picture');
+      if (image && event.target?.result) {
+        image.src = event.target.result;
+      }
+    };
+    reader.readAsDataURL(profileImageInput.files[0]);
+  }
+});
+
+document.addEventListener('click', (e) => {
+  const deleteProfilePictureButton = e.target.closest('.delete-profile-picture');
+  if (!deleteProfilePictureButton) return;
+
+  const image = document.querySelector('#edit-profile-form .profile-picture');
+  const input = document.getElementById('profile-image-upload');
+  if (image) {
+    image.src = '/public/images/account-icon.png';
+  }
+  if (input) {
+    input.value = '';
   }
 });
 

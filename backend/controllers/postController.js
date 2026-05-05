@@ -346,6 +346,170 @@ async function createPost(req, res) {
   }
 }
 
+async function updatePost(req, res) {
+  const postId = Number(req.params.postId);
+  if (!Number.isInteger(postId)) {
+    return res.status(400).json({ message: 'Некоректний ідентифікатор допису.' });
+  }
+
+  const validationError = validatePostPayload(req.body);
+  if (validationError) {
+    return res.status(400).json({ message: validationError });
+  }
+
+  const { type, title, description } = req.body;
+  const tags = normalizeTags(req.body.tags);
+  const images = normalizeImages(req.body.images);
+  const postType = resolvePostType(type);
+  const client = await pool.connect();
+
+  try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ message: 'Потрібно увійти в систему.' });
+    }
+
+    await client.query('BEGIN');
+    await ensurePostTypesExist(client);
+
+    const existingResult = await client.query(
+      `
+        SELECT post_id, user_rnokpp, post_type_id, post_status
+        FROM post
+        WHERE post_id = $1
+      `,
+      [postId]
+    );
+
+    const existingPost = existingResult.rows[0];
+    if (!existingPost) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Допис не знайдено.' });
+    }
+
+    if (existingPost.user_rnokpp !== currentUser.user_rnokpp) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ message: 'Ви не можете редагувати чужий допис.' });
+    }
+
+    if (existingPost.post_status === 'closed') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Закритий запит не можна редагувати.' });
+    }
+
+    if (existingPost.post_type_id !== postType.id) {
+      const responseCountResult = await client.query(
+        `
+          SELECT COUNT(*)::int AS total
+          FROM response
+          WHERE post_id = $1
+        `,
+        [postId]
+      );
+
+      if (Number(responseCountResult.rows[0]?.total || 0) > 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ message: 'Не можна змінити тип допису після появи відгуків.' });
+      }
+    }
+
+    await client.query(
+      `
+        UPDATE post
+        SET
+          post_type_id = $2,
+          post_title = $3,
+          post_description = $4
+        WHERE post_id = $1
+      `,
+      [postId, postType.id, title.trim(), description.trim()]
+    );
+
+    await client.query('DELETE FROM post_tag WHERE post_id = $1', [postId]);
+    await client.query('DELETE FROM post_image WHERE post_id = $1', [postId]);
+
+    for (const imageUrl of images) {
+      const postImageId = await getNextId(client, 'post_image', 'post_image_id');
+      await client.query(
+        `
+          INSERT INTO post_image (post_image_id, post_id, post_image_url)
+          VALUES ($1, $2, $3)
+        `,
+        [postImageId, postId, imageUrl]
+      );
+    }
+
+    for (const tagName of tags) {
+      const tagId = await getOrCreateTagId(client, tagName);
+      await client.query(
+        `
+          INSERT INTO post_tag (tag_id, post_id)
+          VALUES ($1, $2)
+        `,
+        [tagId, postId]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    const updatedResult = await pool.query(
+      `
+        SELECT
+          p.post_id,
+          p.user_rnokpp,
+          p.post_type_id,
+          pt.post_type_name,
+          p.post_title,
+          p.post_description,
+          p.post_status,
+          p.post_datetime,
+          u.user_name,
+          u.user_image_url,
+          u.role_id,
+          r.role_name,
+          COALESCE(array_remove(array_agg(DISTINCT t.tag_name), NULL), '{}') AS tags,
+          COALESCE(array_remove(array_agg(DISTINCT pi.post_image_url), NULL), '{}') AS images
+        FROM post p
+        LEFT JOIN post_type pt ON pt.post_type_id = p.post_type_id
+        LEFT JOIN app_user u ON u.user_rnokpp = p.user_rnokpp
+        LEFT JOIN role r ON r.role_id = u.role_id
+        LEFT JOIN post_tag ptg ON ptg.post_id = p.post_id
+        LEFT JOIN tag t ON t.tag_id = ptg.tag_id
+        LEFT JOIN post_image pi ON pi.post_id = p.post_id
+        WHERE p.post_id = $1
+        GROUP BY
+          p.post_id,
+          p.user_rnokpp,
+          p.post_type_id,
+          pt.post_type_name,
+          p.post_title,
+          p.post_description,
+          p.post_status,
+          p.post_datetime,
+          u.user_name,
+          u.user_image_url,
+          u.role_id,
+          r.role_name
+      `,
+      [postId]
+    );
+
+    const post = formatPost(updatedResult.rows[0]);
+    post.isOwnPost = true;
+
+    return res.status(200).json({
+      message: 'Допис оновлено.',
+      post,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Помилка оновлення допису:', error);
+    return res.status(500).json({ message: 'Не вдалося оновити допис.' });
+  } finally {
+    client.release();
+  }
+}
+
 async function deletePost(req, res) {
   const postId = Number(req.params.postId);
   if (!Number.isInteger(postId)) {
@@ -401,4 +565,5 @@ module.exports = {
   createPost,
   deletePost,
   fetchPosts,
+  updatePost,
 };

@@ -33,6 +33,13 @@ async function getNextId(client, tableName, idColumn) {
   return Number(result.rows[0].next_id);
 }
 
+async function ensureResponseStatusColumn(client = pool) {
+  await client.query(`
+    ALTER TABLE response
+    ADD COLUMN IF NOT EXISTS response_status TEXT DEFAULT 'open'
+  `);
+}
+
 function normalizeImages(images) {
   if (!Array.isArray(images)) {
     return [];
@@ -64,7 +71,7 @@ function formatAcceptedRequest(row, currentUser) {
     createdAtIso: row.response_datetime ? new Date(row.response_datetime).toISOString() : new Date().toISOString(),
     acceptedAt: row.response_datetime ? new Date(row.response_datetime).getTime() : Date.now(),
     acceptedDateText: row.response_datetime ? new Date(row.response_datetime).toISOString() : new Date().toISOString(),
-    status: row.post_status === 'closed' ? 'closed' : 'open',
+    status: row.post_status === 'closed' ? 'closed' : (row.response_status || 'open'),
     isOwnResponse: currentUser ? currentUser.user_rnokpp === row.user_rnokpp : false,
   };
 }
@@ -76,12 +83,15 @@ async function fetchAcceptedRequests(req, res) {
       return res.status(401).json({ message: 'Потрібно увійти в систему.' });
     }
 
+    await ensureResponseStatusColumn();
+
     const result = await pool.query(
       `
         SELECT
           rsp.response_id,
           rsp.user_rnokpp,
           rsp.post_id,
+          rsp.response_status,
           rsp.response_title,
           rsp.response_description,
           rsp.response_datetime,
@@ -108,6 +118,7 @@ async function fetchAcceptedRequests(req, res) {
           rsp.response_id,
           rsp.user_rnokpp,
           rsp.post_id,
+          rsp.response_status,
           rsp.response_title,
           rsp.response_description,
           rsp.response_datetime,
@@ -158,6 +169,7 @@ async function createResponse(req, res) {
     }
 
     await client.query('BEGIN');
+    await ensureResponseStatusColumn(client);
 
     const postResult = await client.query(
       `
@@ -217,16 +229,18 @@ async function createResponse(req, res) {
           response_id,
           user_rnokpp,
           post_id,
+          response_status,
           response_title,
           response_description,
           response_datetime
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
       `,
       [
         responseId,
         currentUser.user_rnokpp,
         postId,
+        'open',
         title,
         description,
         createdAt,
