@@ -14,8 +14,10 @@
   const apiState = {
     posts: [],
     responses: [],
+    reports: [],
     loading: null,
     responseLoading: null,
+    reportsLoading: null,
   };
   let activeReportContext = null;
 
@@ -162,6 +164,37 @@
     return window.AuthState?.getUser()?.rnokpp || null;
   }
 
+  function resetRequestCaches() {
+    apiState.loading = null;
+    apiState.responseLoading = null;
+    apiState.reportsLoading = null;
+  }
+
+  function normalizeApiReport(report) {
+    const reportRole = report.reporterRole || report.reportType || 'author';
+    return {
+      reportId: report.reportId,
+      requestId: report.requestId || report.postId,
+      responseId: report.responseId || '',
+      reporterRole: reportRole,
+      reporterUserRole: report.reporterUserRole || report.reporterRoleName || window.AuthState?.getUser()?.role_name || '',
+      reportTitle: report.reportTitle || REPORT_TITLES[reportRole] || 'Звіт',
+      text: report.text || '',
+      images: Array.isArray(report.images) ? report.images : [],
+      createdAt: report.createdAt || Date.now(),
+      createdAtIso: report.createdAtIso || new Date().toISOString(),
+      requestSnapshot: report.requestSnapshot || {
+        title: report.requestTitle || 'Без назви запиту',
+        description: report.requestDescription || '',
+        authorName: report.requestAuthorName || report.reporterName || 'Невідомо',
+        authorRole: report.requestAuthorRole || '',
+        dateText: report.requestCreatedAtIso || '',
+        images: Array.isArray(report.requestImages) ? report.requestImages : [],
+        tags: Array.isArray(report.requestTags) ? report.requestTags : [],
+      },
+    };
+  }
+
   async function loadPostsFromServer() {
     if (apiState.loading) {
       return apiState.loading;
@@ -225,6 +258,43 @@
     })();
 
     return apiState.responseLoading;
+  }
+
+  async function loadReportsFromServer() {
+    if (!window.AuthState?.isLoggedIn()) {
+      apiState.reports = [];
+      return apiState.reports;
+    }
+
+    if (apiState.reportsLoading) {
+      return apiState.reportsLoading;
+    }
+
+    apiState.reportsLoading = (async () => {
+      try {
+        const response = await fetch('/reports/mine', {
+          credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Не вдалося завантажити звіти: ${response.status}`);
+        }
+
+        const result = await response.json();
+        apiState.reports = Array.isArray(result.reports)
+          ? result.reports.map(normalizeApiReport)
+          : [];
+      } catch (error) {
+        console.error('Помилка завантаження звітів:', error);
+        apiState.reports = [];
+      } finally {
+        apiState.reportsLoading = null;
+      }
+
+      return apiState.reports;
+    })();
+
+    return apiState.reportsLoading;
   }
 
   function getApiAcceptedRequestStatus(requestId) {
@@ -553,6 +623,7 @@
   function getReportsSorted() {
     const state = getState();
     return [
+      ...apiState.reports,
       ...Object.values(state.reports),
       ...Object.values(runtimeState.reports),
     ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -777,12 +848,14 @@
 
         activeReportContext = {
           requestId: card.dataset.requestId,
+          responseId: card.dataset.responseId || '',
           reportRole,
           requestData,
         };
 
         form.reset();
         form.dataset.requestId = card.dataset.requestId;
+        form.dataset.responseId = card.dataset.responseId || '';
         form.dataset.reportRole = reportRole;
         heading.textContent = REPORT_TITLES[reportRole] || 'Звіт';
         if (preview) preview.innerHTML = '';
@@ -1041,6 +1114,7 @@
   async function syncRequestUI() {
     await loadPostsFromServer();
     await loadResponsesFromServer();
+    await loadReportsFromServer();
     renderGeneratedProfilePosts();
     renderGeneratedFundraisers();
     renderGeneratedRequestFeed();
@@ -1235,6 +1309,62 @@
       return;
     }
 
+    const editPostForm = event.target.closest('#edit-post-form');
+    if (editPostForm) {
+      event.preventDefault();
+
+      const postId = editPostForm.dataset.postId;
+      if (!postId || !/^\d+$/.test(String(postId))) {
+        alert('Не вдалося визначити допис для редагування.');
+        return;
+      }
+
+      const typeSelect = editPostForm.querySelector('select[name="type"]');
+      const titleInput = editPostForm.querySelector('input[name="post-title"]');
+      const descriptionInput = editPostForm.querySelector('textarea[name="post-text"]');
+      const tagTitles = Array.from(editPostForm.querySelectorAll('.post-tag-title')).map(tag => tag.textContent.trim());
+      const previewImages = Array.from(editPostForm.querySelectorAll('.image-container .added-image')).map(image => image.getAttribute('src')).filter(Boolean);
+
+      try {
+        const response = await fetch(`/posts/${postId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            type: typeSelect?.value || 'fundraising',
+            title: titleInput?.value.trim() || '',
+            description: descriptionInput?.value.trim() || '',
+            tags: tagTitles,
+            images: previewImages,
+          }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          alert(result.message || 'Не вдалося оновити допис.');
+          return;
+        }
+
+        document.getElementById('modal-overlay')?.classList.add('hidden');
+        document.getElementById('post-modal')?.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        editPostForm.reset();
+        delete editPostForm.dataset.postId;
+
+        const preview = document.getElementById('edit-post-image-preview-container');
+        const tags = editPostForm.querySelector('#user-post-tags');
+        if (preview) preview.innerHTML = '';
+        if (tags) tags.innerHTML = '';
+
+        resetRequestCaches();
+        await syncRequestUI();
+      } catch (error) {
+        console.error('Помилка оновлення допису:', error);
+        alert('Не вдалося оновити допис. Спробуйте пізніше.');
+      }
+      return;
+    }
+
     const answerForm = event.target.closest('#answer-request-form');
     if (answerForm) {
       event.preventDefault();
@@ -1299,6 +1429,7 @@
       event.preventDefault();
 
       const requestId = activeReportContext?.requestId || reportForm.dataset.requestId;
+      const responseId = activeReportContext?.responseId || reportForm.dataset.responseId || '';
       const reportRole = activeReportContext?.reportRole || reportForm.dataset.reportRole;
       const reportText = reportForm.querySelector('#report-text')?.value.trim() || '';
       const reportImages = Array.from(reportForm.querySelectorAll('.image-container .added-image'))
@@ -1306,6 +1437,41 @@
         .filter(Boolean);
 
       if (!requestId || !reportRole) return;
+
+      if (!isDemoRequestId(requestId)) {
+        try {
+          const response = await fetch('/reports', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              post_id: Number(requestId),
+              response_id: /^\d+$/.test(String(responseId)) ? Number(responseId) : null,
+              reporter_role: reportRole,
+              text: reportText,
+              request_snapshot: activeReportContext?.requestData || {},
+              images: reportImages,
+            }),
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+            alert(result.message || 'Не вдалося створити звіт.');
+            return;
+          }
+
+          resetRequestCaches();
+          await syncRequestUI();
+          document.getElementById('modal-overlay')?.classList.add('hidden');
+          document.getElementById('report-modal')?.classList.add('hidden');
+          document.body.classList.remove('modal-open');
+          activeReportContext = null;
+        } catch (error) {
+          console.error('Помилка створення звіту:', error);
+          alert('Не вдалося створити звіт. Спробуйте пізніше.');
+        }
+        return;
+      }
 
       const state = getState();
       const reportId = `report-${requestId}-${Date.now()}`;

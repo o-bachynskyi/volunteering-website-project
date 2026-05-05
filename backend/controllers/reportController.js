@@ -49,51 +49,27 @@ async function ensureResponseStatusColumn(client = pool) {
   `);
 }
 
-async function ensureReportsTables(client = pool) {
-  await ensureResponseStatusColumn(client);
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS report (
-      report_id INTEGER PRIMARY KEY,
-      user_rnokpp VARCHAR(32) NOT NULL,
-      post_id INTEGER NOT NULL,
-      response_id INTEGER NULL,
-      reporter_role TEXT NOT NULL,
-      report_title TEXT NOT NULL,
-      report_text TEXT NOT NULL,
-      report_datetime TIMESTAMP NOT NULL DEFAULT NOW(),
-      request_snapshot TEXT NOT NULL DEFAULT '{}'
-    )
-  `);
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS report_image (
-      report_image_id INTEGER PRIMARY KEY,
-      report_id INTEGER NOT NULL,
-      report_image_url TEXT NOT NULL
-    )
-  `);
-}
-
 function formatReport(row) {
-  let requestSnapshot = {};
-
-  try {
-    requestSnapshot = row.request_snapshot ? JSON.parse(row.request_snapshot) : {};
-  } catch (error) {
-    requestSnapshot = {};
-  }
-
   return {
-    reportId: String(row.report_id),
+    reportId: String(row.report_number),
     requestId: String(row.post_id),
     responseId: row.response_id ? String(row.response_id) : '',
-    reporterRole: row.reporter_role,
-    reporterUserRole: row.role_name || (row.reporter_role === 'author' ? 'Військовий' : 'Волонтер'),
-    reportTitle: row.report_title,
-    text: row.report_text,
+    reporterRole: row.report_type || 'author',
+    reporterUserRole: row.user_role_name || (row.report_type === 'author' ? 'Військовий' : 'Волонтер'),
+    reportTitle: REPORT_TITLES[row.report_type] || 'Звіт',
+    text: row.report_text || '',
     images: row.images || [],
-    createdAt: row.report_datetime ? new Date(row.report_datetime).getTime() : Date.now(),
-    createdAtIso: row.report_datetime ? new Date(row.report_datetime).toISOString() : new Date().toISOString(),
-    requestSnapshot,
+    createdAt: row.creation_datetime ? new Date(row.creation_datetime).getTime() : Date.now(),
+    createdAtIso: row.creation_datetime ? new Date(row.creation_datetime).toISOString() : new Date().toISOString(),
+    requestSnapshot: {
+      title: row.post_title || 'Без назви запиту',
+      description: row.post_description || '',
+      authorName: row.request_author_name || 'Невідомо',
+      authorRole: row.request_author_role || '',
+      dateText: row.post_datetime ? new Date(row.post_datetime).toISOString() : '',
+      images: row.request_images || [],
+      tags: row.request_tags || [],
+    },
   };
 }
 
@@ -104,37 +80,54 @@ async function fetchMyReports(req, res) {
       return res.status(401).json({ message: 'Потрібно увійти в систему.' });
     }
 
-    await ensureReportsTables();
+    await ensureResponseStatusColumn();
 
     const result = await pool.query(
       `
         SELECT
-          rp.report_id,
-          rp.post_id,
-          rp.response_id,
-          rp.reporter_role,
-          rp.report_title,
-          rp.report_text,
-          rp.report_datetime,
-          rp.request_snapshot,
-          u.role_name,
-          COALESCE(array_remove(array_agg(DISTINCT ri.report_image_url), NULL), '{}') AS images
-        FROM report rp
-        LEFT JOIN app_user au ON au.user_rnokpp = rp.user_rnokpp
-        LEFT JOIN role u ON u.role_id = au.role_id
-        LEFT JOIN report_image ri ON ri.report_id = rp.report_id
-        WHERE rp.user_rnokpp = $1
+          rpt.report_number,
+          rpt.post_id,
+          rpt.report_type,
+          rpt.report_text,
+          rpt.creation_datetime,
+          p.post_title,
+          p.post_description,
+          p.post_datetime,
+          request_author.user_name AS request_author_name,
+          request_author_role.role_name AS request_author_role,
+          reporter_role.role_name AS user_role_name,
+          helper_response.response_id,
+          COALESCE(array_remove(array_agg(DISTINCT report_image.report_image_url), NULL), '{}') AS images,
+          COALESCE(array_remove(array_agg(DISTINCT request_image.post_image_url), NULL), '{}') AS request_images,
+          COALESCE(array_remove(array_agg(DISTINCT request_tag.tag_name), NULL), '{}') AS request_tags
+        FROM report rpt
+        LEFT JOIN post p ON p.post_id = rpt.post_id
+        LEFT JOIN app_user request_author ON request_author.user_rnokpp = p.user_rnokpp
+        LEFT JOIN role request_author_role ON request_author_role.role_id = request_author.role_id
+        LEFT JOIN app_user reporter_user ON reporter_user.user_rnokpp = rpt.user_rnokpp
+        LEFT JOIN role reporter_role ON reporter_role.role_id = reporter_user.role_id
+        LEFT JOIN response helper_response
+          ON helper_response.user_rnokpp = rpt.user_rnokpp
+          AND helper_response.post_id = rpt.post_id
+        LEFT JOIN report_image ON report_image.report_number = rpt.report_number
+        LEFT JOIN post_image request_image ON request_image.post_id = p.post_id
+        LEFT JOIN post_tag request_post_tag ON request_post_tag.post_id = p.post_id
+        LEFT JOIN tag request_tag ON request_tag.tag_id = request_post_tag.tag_id
+        WHERE rpt.user_rnokpp = $1
         GROUP BY
-          rp.report_id,
-          rp.post_id,
-          rp.response_id,
-          rp.reporter_role,
-          rp.report_title,
-          rp.report_text,
-          rp.report_datetime,
-          rp.request_snapshot,
-          u.role_name
-        ORDER BY rp.report_datetime DESC, rp.report_id DESC
+          rpt.report_number,
+          rpt.post_id,
+          rpt.report_type,
+          rpt.report_text,
+          rpt.creation_datetime,
+          p.post_title,
+          p.post_description,
+          p.post_datetime,
+          request_author.user_name,
+          request_author_role.role_name,
+          reporter_role.role_name,
+          helper_response.response_id
+        ORDER BY rpt.creation_datetime DESC NULLS LAST, rpt.report_number DESC
       `,
       [currentUser.user_rnokpp]
     );
@@ -155,7 +148,6 @@ async function createReport(req, res) {
     : Number(req.body.response_id);
   const reporterRole = String(req.body.reporter_role || '').trim().toLowerCase();
   const reportText = String(req.body.text || '').trim();
-  const requestSnapshot = req.body.request_snapshot || {};
   const images = normalizeImages(req.body.images);
 
   if (!Number.isInteger(postId)) {
@@ -183,7 +175,7 @@ async function createReport(req, res) {
     }
 
     await client.query('BEGIN');
-    await ensureReportsTables(client);
+    await ensureResponseStatusColumn(client);
 
     const postResult = await client.query(
       `
@@ -208,7 +200,7 @@ async function createReport(req, res) {
     } else {
       const responseResult = await client.query(
         `
-          SELECT response_id, user_rnokpp, response_status
+          SELECT response_id, user_rnokpp
           FROM response
           WHERE response_id = $1 AND post_id = $2
         `,
@@ -227,34 +219,28 @@ async function createReport(req, res) {
       }
     }
 
-    const reportId = await getNextId(client, 'report', 'report_id');
+    const reportNumber = await getNextId(client, 'report', 'report_number');
     const createdAt = new Date();
 
     await client.query(
       `
         INSERT INTO report (
-          report_id,
+          report_number,
           user_rnokpp,
           post_id,
-          response_id,
-          reporter_role,
-          report_title,
+          report_type,
           report_text,
-          report_datetime,
-          request_snapshot
+          creation_datetime
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6)
       `,
       [
-        reportId,
+        reportNumber,
         currentUser.user_rnokpp,
         postId,
-        responseId,
         reporterRole,
-        REPORT_TITLES[reporterRole],
         reportText,
         createdAt,
-        JSON.stringify(requestSnapshot || {}),
       ]
     );
 
@@ -262,10 +248,10 @@ async function createReport(req, res) {
       const reportImageId = await getNextId(client, 'report_image', 'report_image_id');
       await client.query(
         `
-          INSERT INTO report_image (report_image_id, report_id, report_image_url)
+          INSERT INTO report_image (report_image_id, report_number, report_image_url)
           VALUES ($1, $2, $3)
         `,
-        [reportImageId, reportId, imageUrl]
+        [reportImageId, reportNumber, imageUrl]
       );
     }
 
@@ -294,7 +280,7 @@ async function createReport(req, res) {
     return res.status(201).json({
       message: 'Звіт збережено.',
       report: {
-        reportId: String(reportId),
+        reportId: String(reportNumber),
         requestId: String(postId),
         responseId: responseId ? String(responseId) : '',
         reporterRole,
@@ -304,7 +290,7 @@ async function createReport(req, res) {
         images,
         createdAt: createdAt.getTime(),
         createdAtIso: createdAt.toISOString(),
-        requestSnapshot,
+        requestSnapshot: req.body.request_snapshot || {},
       },
     });
   } catch (error) {

@@ -80,6 +80,80 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.delete-profile-picture')) {
+      return;
+    }
+
+    const profileImage = document.querySelector('#edit-profile-form .profile-picture');
+    if (profileImage) {
+      profileImage.src = '/public/images/account-icon.png';
+    }
+
+    const uploadInput = document.getElementById('profile-image-upload');
+    if (uploadInput) {
+      uploadInput.value = '';
+    }
+  });
+
+  document.addEventListener('change', (e) => {
+    if (!e.target.matches('#profile-image-upload')) {
+      return;
+    }
+
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      const profileImage = document.querySelector('#edit-profile-form .profile-picture');
+      if (profileImage) {
+        profileImage.src = loadEvent.target?.result || '/public/images/account-icon.png';
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.addEventListener('submit', async (e) => {
+    const profileForm = e.target.closest('#edit-profile-form');
+    if (!profileForm) {
+      return;
+    }
+
+    e.preventDefault();
+
+    const fullName = profileForm.querySelector('#profile-title')?.value.trim() || '';
+    const description = profileForm.querySelector('#profile-text')?.value.trim() || '';
+    const imageUrl = profileForm.querySelector('.profile-picture')?.getAttribute('src') || '';
+
+    try {
+      const response = await fetch('/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          full_name: fullName,
+          description,
+          image_url: imageUrl,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        alert(result.message || 'Не вдалося оновити профіль.');
+        return;
+      }
+
+      window.AuthState?.setUser(result.user);
+      closeModal();
+    } catch (error) {
+      console.error('Помилка оновлення профілю:', error);
+      alert('Не вдалося оновити профіль. Спробуйте пізніше.');
+    }
+  });
+
   logoutButton?.addEventListener('click', async () => {
     try {
       await fetch('/auth/logout', {

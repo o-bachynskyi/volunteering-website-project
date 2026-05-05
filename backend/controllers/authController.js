@@ -398,7 +398,6 @@ async function updateUserProfile(req, res) {
         `
           INSERT INTO user_tag (user_rnokpp, tag_id)
           VALUES ($1, $2)
-          ON CONFLICT (user_rnokpp, tag_id) DO NOTHING
         `,
         [user.user_rnokpp, tagId]
       );
