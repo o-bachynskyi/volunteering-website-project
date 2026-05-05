@@ -3,7 +3,9 @@ const path = require('path');
 const pool = require('./db');
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
+const reportRoutes = require('./routes/reports');
 const responseRoutes = require('./routes/responses');
+const userRoutes = require('./routes/users');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -14,7 +16,9 @@ app.use(express.json());
 app.use('/public', express.static(publicDir));
 app.use('/auth', authRoutes);
 app.use('/posts', postRoutes);
+app.use('/reports', reportRoutes);
 app.use('/responses', responseRoutes);
+app.use('/users', userRoutes);
 
 app.get('/health', async (req, res) => {
   try {
