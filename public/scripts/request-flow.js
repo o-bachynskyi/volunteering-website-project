@@ -11,6 +11,12 @@
     acceptedRequests: {},
     reports: {},
   };
+  const apiState = {
+    posts: [],
+    responses: [],
+    loading: null,
+    responseLoading: null,
+  };
   let activeReportContext = null;
 
   const defaultState = {
@@ -152,12 +158,90 @@
     `).join('');
   }
 
+  function getCurrentUserId() {
+    return window.AuthState?.getUser()?.rnokpp || null;
+  }
+
+  async function loadPostsFromServer() {
+    if (apiState.loading) {
+      return apiState.loading;
+    }
+
+    apiState.loading = (async () => {
+      try {
+        const response = await fetch('/posts', {
+          credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Не вдалося завантажити дописи: ${response.status}`);
+        }
+
+        const result = await response.json();
+        apiState.posts = Array.isArray(result.posts) ? result.posts : [];
+      } catch (error) {
+        console.error('Помилка завантаження дописів:', error);
+        apiState.posts = [];
+      } finally {
+        apiState.loading = null;
+      }
+
+      return apiState.posts;
+    })();
+
+    return apiState.loading;
+  }
+
+  async function loadResponsesFromServer() {
+    if (!window.AuthState?.isLoggedIn()) {
+      apiState.responses = [];
+      return apiState.responses;
+    }
+
+    if (apiState.responseLoading) {
+      return apiState.responseLoading;
+    }
+
+    apiState.responseLoading = (async () => {
+      try {
+        const response = await fetch('/responses/mine', {
+          credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Не вдалося завантажити відгуки: ${response.status}`);
+        }
+
+        const result = await response.json();
+        apiState.responses = Array.isArray(result.acceptedRequests) ? result.acceptedRequests : [];
+      } catch (error) {
+        console.error('Помилка завантаження прийнятих запитів:', error);
+        apiState.responses = [];
+      } finally {
+        apiState.responseLoading = null;
+      }
+
+      return apiState.responses;
+    })();
+
+    return apiState.responseLoading;
+  }
+
+  function getApiAcceptedRequestStatus(requestId) {
+    const response = apiState.responses.find((entry) => entry.requestId === String(requestId));
+    return response?.status || null;
+  }
+
+  function getApiAcceptedRequestByRequestId(requestId) {
+    return apiState.responses.find((entry) => entry.requestId === String(requestId)) || null;
+  }
+
   function getAcceptedRequestCollections(requestId, state) {
     if (isDemoRequestId(requestId)) {
       return { primary: runtimeState.acceptedRequests, secondary: null, persist: false };
     }
 
-    return { primary: state.acceptedRequests, secondary: runtimeState.acceptedRequests, persist: true };
+    return { primary: runtimeState.acceptedRequests, secondary: state.acceptedRequests, persist: false };
   }
 
   function getReportCollections(requestId, state) {
@@ -205,7 +289,7 @@
     `;
 
     return `
-      <article class="post request-post-card" data-request-id="${escapeHtml(request.requestId)}" data-request-status="${escapeHtml(request.status)}" data-request-context="helper">
+      <article class="post request-post-card" data-request-id="${escapeHtml(request.requestId)}" data-response-id="${escapeHtml(request.responseId || '')}" data-request-status="${escapeHtml(request.status)}" data-request-context="helper">
         <header class="post-header request-post-header">
           <div class="request-post-header-left">
             <img src="${escapeHtml(request.avatar)}" alt="User Profile Picture" class="post-profile-pic">
@@ -243,6 +327,11 @@
   }
 
   function buildRequestFeedCard(request) {
+    const isOwnRequest = request.isOwnPost || request.authorId === getCurrentUserId();
+    if (!isOwnRequest) {
+      return buildPublicRequestCard(request);
+    }
+
     const isClosed = request.status === 'closed';
     const editAction = isClosed ? '' : `
       <button class="post-dropdown-item edit-post-button">
@@ -264,11 +353,11 @@
             <img src="${escapeHtml(request.avatar)}" alt="User Profile Picture" class="post-profile-pic">
             <div class="post-data">
               <div class="user-info">
-                <p class="name">Олег</p>
+                <p class="name">${escapeHtml(request.authorName || 'Користувач')}</p>
                 <p class="dot">•</p>
                 <time class="post-date">${escapeHtml(request.dateText)}</time>
               </div>
-              <p class="user-role">Волонтер</p>
+              <p class="user-role">${escapeHtml(request.authorRole || 'Користувач')}</p>
               <p class="request-status ${isClosed ? 'is-closed' : 'is-open'}">${isClosed ? 'Закритий' : 'Відкритий'}</p>
             </div>
           </div>
@@ -296,6 +385,39 @@
     `;
   }
 
+  function buildPublicRequestCard(request) {
+    const isClosed = request.status === 'closed';
+
+    return `
+      <article class="post request-post-card" data-request-id="${escapeHtml(request.postId)}" data-request-status="${escapeHtml(request.status)}" data-request-context="request-feed">
+        <header class="request-post-header">
+          <div class="request-post-header-left">
+            <img src="${escapeHtml(request.avatar)}" alt="User Profile Picture" class="post-profile-pic">
+            <div class="post-data">
+              <div class="user-info">
+                <p class="name">${escapeHtml(request.authorName || 'Користувач')}</p>
+                <p class="dot">•</p>
+                <time class="post-date">${escapeHtml(request.dateText)}</time>
+              </div>
+              <p class="user-role">${escapeHtml(request.authorRole || 'Користувач')}</p>
+              <p class="request-status ${isClosed ? 'is-closed' : 'is-open'}">${isClosed ? 'Закритий' : 'Відкритий'}</p>
+            </div>
+          </div>
+          <button class="answer-request-button" aria-label="Відгукнутись">
+            <span class="button-text">Відгукнутись</span>
+            <img class="button-icon" src="/public/images/answer-icon.png" alt="Відгук icon">
+          </button>
+        </header>
+        <div class="post-content">
+          ${request.tags?.length ? `<div class="profile-tags">${buildTags(request.tags)}</div>` : ''}
+          <h2 class="post-title">${escapeHtml(request.title)}</h2>
+          <p class="post-description">${escapeHtml(request.description)}</p>
+          <section class="post-photos">${buildImages(request.images)}</section>
+        </div>
+      </article>
+    `;
+  }
+
   function buildProfileGeneratedPostCard(post) {
     const isRequest = post.type === 'request';
     const isClosed = post.status === 'closed';
@@ -310,14 +432,14 @@
     return `
       <article class="post ${isRequest ? 'request-post-card' : ''}" data-owned-post-id="${escapeHtml(post.postId)}" ${isRequest ? `data-request-id="${escapeHtml(post.postId)}" data-request-status="${escapeHtml(post.status)}" data-request-context="author"` : ''}>
         <header class="post-header">
-          <img src="${escapeHtml(post.avatar)}" alt="User Profile Picture" class="post-profile-pic">
+            <img src="${escapeHtml(post.avatar)}" alt="User Profile Picture" class="post-profile-pic">
           <div class="post-data">
             <div class="user-info">
-              <p class="name">Олег</p>
+              <p class="name">${escapeHtml(post.authorName || 'Користувач')}</p>
               <p class="dot">•</p>
               <time class="post-date">${escapeHtml(post.dateText)}</time>
             </div>
-            <p class="user-role">Волонтер</p>
+            <p class="user-role">${escapeHtml(post.authorRole || 'Користувач')}</p>
             ${requestStatus}
             <button class="post-more-button">
               <img src="/public/images/more-icon.png" alt="more">
@@ -348,17 +470,7 @@
   }
 
   function buildFundraiserCard(post) {
-    return `
-      <article class="post" data-owned-post-id="${escapeHtml(post.postId)}">
-        <header class="post-header">
-          <img src="${escapeHtml(post.avatar)}" alt="User Profile Picture" class="post-profile-pic">
-          <div class="post-data">
-            <div class="user-info">
-              <p class="name">Олег</p>
-              <p class="dot">•</p>
-              <time class="post-date">${escapeHtml(post.dateText)}</time>
-            </div>
-            <p class="user-role">Волонтер</p>
+    const ownerActions = post.isOwnPost ? `
             <button class="post-more-button">
               <img src="/public/images/more-icon.png" alt="more">
             </button>
@@ -372,6 +484,20 @@
                 Видалити
               </button>
             </div>
+    ` : '';
+
+    return `
+      <article class="post" data-owned-post-id="${escapeHtml(post.postId)}">
+        <header class="post-header">
+          <img src="${escapeHtml(post.avatar)}" alt="User Profile Picture" class="post-profile-pic">
+          <div class="post-data">
+            <div class="user-info">
+              <p class="name">${escapeHtml(post.authorName || 'Користувач')}</p>
+              <p class="dot">•</p>
+              <time class="post-date">${escapeHtml(post.dateText)}</time>
+            </div>
+            <p class="user-role">${escapeHtml(post.authorRole || 'Користувач')}</p>
+            ${ownerActions}
           </div>
         </header>
         <div class="post-content">
@@ -410,8 +536,18 @@
     `;
   }
 
-  function getGeneratedPostsSorted() {
-    return Object.values(getState().generatedPosts).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  function getAllPostsSorted() {
+    return [...apiState.posts]
+      .map((post) => ({
+        ...post,
+        dateText: post.dateText || formatDateTextForCard(post.createdAt),
+      }))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+
+  function getOwnedPostsSorted() {
+    const currentUserId = getCurrentUserId();
+    return getAllPostsSorted().filter((post) => currentUserId && post.authorId === currentUserId);
   }
 
   function getReportsSorted() {
@@ -427,7 +563,7 @@
     if (!container) return;
 
     const state = getState();
-    container.innerHTML = getGeneratedPostsSorted()
+    container.innerHTML = getOwnedPostsSorted()
       .map(post => {
         if (post.type === 'request') {
           return buildProfileGeneratedPostCard({
@@ -444,7 +580,7 @@
     const container = document.getElementById('generated-fundraiser-posts');
     if (!container) return;
 
-    container.innerHTML = getGeneratedPostsSorted()
+    container.innerHTML = getAllPostsSorted()
       .filter(post => post.type === 'fundraising')
       .map(buildFundraiserCard)
       .join('');
@@ -455,7 +591,7 @@
     if (!container) return;
 
     const state = getState();
-    container.innerHTML = getGeneratedPostsSorted()
+    container.innerHTML = getAllPostsSorted()
       .filter(post => post.type === 'request')
       .map(post => buildRequestFeedCard({
         ...post,
@@ -469,9 +605,11 @@
     const empty = document.getElementById('accepted-requests-empty');
     if (!list || !empty) return;
 
-    const state = getState();
     const acceptedRequests = [
-      ...Object.values(state.acceptedRequests),
+      ...apiState.responses.map((request) => ({
+        ...request,
+        acceptedDateText: request.acceptedDateText || formatDateTextForCard(request.createdAt),
+      })),
       ...Object.values(runtimeState.acceptedRequests),
     ].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
@@ -485,7 +623,7 @@
     list.innerHTML = acceptedRequests
       .map(request => buildAcceptedRequestCard({
         ...request,
-        status: getAcceptedRequestStatus(request.requestId, state),
+        status: runtimeState.acceptedRequests[request.requestId]?.status || request.status,
       }))
       .join('');
   }
@@ -519,9 +657,13 @@
       const requestContext = card.dataset.requestContext;
       const isOwnRequest = requestContext === 'author' || requestContext === 'author-feed';
       const status = requestContext === 'helper'
-        ? getAcceptedRequestStatus(requestId, state)
+        ? (getApiAcceptedRequestStatus(requestId) || getAcceptedRequestStatus(requestId, state))
         : getOverallRequestStatus(requestId, state);
-      const accepted = Boolean(runtimeState.acceptedRequests[requestId] || state.acceptedRequests[requestId]);
+      const accepted = Boolean(
+        getApiAcceptedRequestByRequestId(requestId)
+        || runtimeState.acceptedRequests[requestId]
+        || state.acceptedRequests[requestId]
+      );
       const statusElement = card.querySelector('.request-status');
       const answerButton = card.querySelector('.answer-request-button');
       const closeButton = card.querySelector('.close-request-button');
@@ -896,7 +1038,9 @@
     reportWindow.document.close();
   }
 
-  function syncRequestUI() {
+  async function syncRequestUI() {
+    await loadPostsFromServer();
+    await loadResponsesFromServer();
     renderGeneratedProfilePosts();
     renderGeneratedFundraisers();
     renderGeneratedRequestFeed();
@@ -905,8 +1049,15 @@
     applyStatusToRequestCards();
   }
 
-  document.addEventListener('DOMContentLoaded', syncRequestUI);
-  document.addEventListener('page:loaded', syncRequestUI);
+  document.addEventListener('DOMContentLoaded', () => {
+    void syncRequestUI();
+  });
+  document.addEventListener('page:loaded', () => {
+    void syncRequestUI();
+  });
+  document.addEventListener('auth:changed', () => {
+    void syncRequestUI();
+  });
 
   document.addEventListener('click', (event) => {
     const navLink = event.target.closest('.nav-button a, #open-profile-button');
@@ -951,11 +1102,34 @@
       if (!card) return;
 
       const requestId = card.dataset.requestId;
+      const responseId = card.dataset.responseId;
+
+      if (/^\d+$/.test(String(responseId))) {
+        fetch(`/responses/${responseId}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        })
+          .then(async (response) => {
+            if (!response.ok) {
+              const result = await response.json().catch(() => ({}));
+              throw new Error(result.message || 'Не вдалося видалити відгук.');
+            }
+
+            delete runtimeState.acceptedRequests[requestId];
+            return syncRequestUI();
+          })
+          .catch((error) => {
+            console.error('Помилка видалення відгуку:', error);
+            alert(error.message || 'Не вдалося видалити відгук.');
+          });
+        return;
+      }
+
       const state = getState();
       delete state.acceptedRequests[requestId];
       delete runtimeState.acceptedRequests[requestId];
       saveState(state);
-      syncRequestUI();
+      void syncRequestUI();
     }
 
     const deleteOwnPostButton = event.target.closest('.delete-own-post-button');
@@ -964,6 +1138,32 @@
       if (!card) return;
 
       const postId = card.dataset.ownedPostId || card.dataset.requestId;
+      if (/^\d+$/.test(String(postId))) {
+        fetch(`/posts/${postId}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        })
+          .then(async (response) => {
+            if (!response.ok) {
+              const result = await response.json().catch(() => ({}));
+              throw new Error(result.message || 'Не вдалося видалити допис.');
+            }
+
+            const state = getState();
+            delete state.requestStatuses[postId];
+            delete state.acceptedRequests[postId];
+            delete runtimeState.requestStatuses[postId];
+            delete runtimeState.acceptedRequests[postId];
+            saveState(state);
+            return syncRequestUI();
+          })
+          .catch((error) => {
+            console.error('Помилка видалення допису:', error);
+            alert(error.message || 'Не вдалося видалити допис.');
+          });
+        return;
+      }
+
       const state = getState();
       state.deletedOwnedPosts[postId] = true;
       delete state.generatedPosts[postId];
@@ -972,7 +1172,7 @@
       delete runtimeState.requestStatuses[postId];
       delete runtimeState.acceptedRequests[postId];
       saveState(state);
-      syncRequestUI();
+      void syncRequestUI();
     }
 
     const viewReportButton = event.target.closest('.view-report-button');
@@ -986,7 +1186,7 @@
     }
   });
 
-  document.addEventListener('submit', (event) => {
+  document.addEventListener('submit', async (event) => {
     const addPostForm = event.target.closest('#add-post-form');
     if (addPostForm) {
       event.preventDefault();
@@ -997,40 +1197,41 @@
       const tagTitles = Array.from(addPostForm.querySelectorAll('.post-tag-title')).map(tag => tag.textContent.trim());
       const previewImages = Array.from(addPostForm.querySelectorAll('.image-container .added-image')).map(image => image.getAttribute('src')).filter(Boolean);
 
-      const selectedType = typeSelect?.value || 'fundraising';
-      const createdAt = Date.now();
-      const postId = `generated-${selectedType}-${createdAt}`;
-      const state = getState();
+      try {
+        const response = await fetch('/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            type: typeSelect?.value || 'fundraising',
+            title: titleInput?.value.trim() || '',
+            description: descriptionInput?.value.trim() || '',
+            tags: tagTitles,
+            images: previewImages,
+          }),
+        });
 
-      state.generatedPosts[postId] = {
-        postId,
-        type: selectedType,
-        status: selectedType === 'request' ? 'open' : undefined,
-        createdAt,
-        title: titleInput?.value.trim() || (selectedType === 'request' ? 'Новий запит' : 'Новий збір'),
-        description: descriptionInput?.value.trim() || 'Опис буде додано пізніше.',
-        tags: tagTitles,
-        avatar: '/public/images/premium_photo-1689568126014-06fea9d5d341.jpg',
-        images: previewImages,
-        dateText: 'щойно',
-      };
+        const result = await response.json();
+        if (!response.ok) {
+          alert(result.message || 'Не вдалося створити допис.');
+          return;
+        }
 
-      if (selectedType === 'request') {
-        state.requestStatuses[postId] = 'open';
+        document.getElementById('modal-overlay')?.classList.add('hidden');
+        document.getElementById('post-modal')?.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        addPostForm.reset();
+
+        const preview = document.getElementById('post-image-preview-container');
+        const tags = document.getElementById('user-post-tags');
+        if (preview) preview.innerHTML = '';
+        if (tags) tags.innerHTML = '';
+
+        await syncRequestUI();
+      } catch (error) {
+        console.error('Помилка створення допису:', error);
+        alert('Не вдалося створити допис. Спробуйте пізніше.');
       }
-
-      saveState(state);
-      syncRequestUI();
-
-      document.getElementById('modal-overlay')?.classList.add('hidden');
-      document.getElementById('post-modal')?.classList.add('hidden');
-      document.body.classList.remove('modal-open');
-      addPostForm.reset();
-
-      const preview = document.getElementById('post-image-preview-container');
-      const tags = document.getElementById('user-post-tags');
-      if (preview) preview.innerHTML = '';
-      if (tags) tags.innerHTML = '';
       return;
     }
 
@@ -1052,18 +1253,44 @@
         status: 'open',
       };
 
-      if (isDemoRequestId(requestId)) {
-        runtimeState.acceptedRequests[requestId] = acceptedRequest;
-      } else {
-        const state = getState();
-        state.acceptedRequests[requestId] = acceptedRequest;
-        saveState(state);
-      }
+      try {
+        if (isDemoRequestId(requestId)) {
+          runtimeState.acceptedRequests[requestId] = acceptedRequest;
+          await syncRequestUI();
+        } else {
+          const response = await fetch('/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              post_id: Number(requestId),
+              title: answerForm.querySelector('#answer-title')?.value.trim() || '',
+              description: answerForm.querySelector('#answer-text')?.value.trim() || '',
+              images: Array.from(answerForm.querySelectorAll('.image-container .added-image'))
+                .map(image => image.getAttribute('src'))
+                .filter(Boolean),
+            }),
+          });
 
-      syncRequestUI();
-      document.getElementById('modal-overlay')?.classList.add('hidden');
-      document.getElementById('answer-request-modal')?.classList.add('hidden');
-      document.body.classList.remove('modal-open');
+          const result = await response.json();
+          if (!response.ok) {
+            alert(result.message || 'Не вдалося надіслати відгук.');
+            return;
+          }
+
+          await syncRequestUI();
+        }
+
+        document.getElementById('modal-overlay')?.classList.add('hidden');
+        document.getElementById('answer-request-modal')?.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        answerForm.reset();
+        const preview = document.getElementById('answer-image-preview-container');
+        if (preview) preview.innerHTML = '';
+      } catch (error) {
+        console.error('Помилка надсилання відгуку:', error);
+        alert('Не вдалося надіслати відгук. Спробуйте пізніше.');
+      }
       return;
     }
 
