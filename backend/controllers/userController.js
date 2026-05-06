@@ -1,15 +1,5 @@
 const pool = require('../db');
 
-async function ensureUserTagTableExists(client = pool) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS user_tag (
-      user_rnokpp VARCHAR(32) NOT NULL,
-      tag_id INTEGER NOT NULL,
-      PRIMARY KEY (user_rnokpp, tag_id)
-    )
-  `);
-}
-
 function getDefaultAvatar(roleCode) {
   return roleCode === 'mi'
     ? '/public/images/account-icon.png'
@@ -40,8 +30,6 @@ function formatUser(row) {
 
 async function fetchUsers(req, res) {
   try {
-    await ensureUserTagTableExists();
-
     const roleId = resolveRoleFilter(req.query.role);
     const params = [];
     let whereClause = '';

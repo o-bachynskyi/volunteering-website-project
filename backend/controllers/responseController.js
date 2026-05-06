@@ -33,13 +33,6 @@ async function getNextId(client, tableName, idColumn) {
   return Number(result.rows[0].next_id);
 }
 
-async function ensureResponseStatusColumn(client = pool) {
-  await client.query(`
-    ALTER TABLE response
-    ADD COLUMN IF NOT EXISTS response_status TEXT DEFAULT 'open'
-  `);
-}
-
 function normalizeImages(images) {
   if (!Array.isArray(images)) {
     return [];
@@ -82,8 +75,6 @@ async function fetchAcceptedRequests(req, res) {
     if (!currentUser) {
       return res.status(401).json({ message: 'Потрібно увійти в систему.' });
     }
-
-    await ensureResponseStatusColumn();
 
     const result = await pool.query(
       `
@@ -169,7 +160,6 @@ async function createResponse(req, res) {
     }
 
     await client.query('BEGIN');
-    await ensureResponseStatusColumn(client);
 
     const postResult = await client.query(
       `

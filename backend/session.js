@@ -1,8 +1,9 @@
 const crypto = require('crypto');
+const { appConfig } = require('./config');
 
 const COOKIE_NAME = 'auth_token';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'volunteering-website-dev-secret';
+const SESSION_SECRET = appConfig.sessionSecret;
 
 function base64UrlEncode(value) {
   return Buffer.from(value).toString('base64url');

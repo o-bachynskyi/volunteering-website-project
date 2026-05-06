@@ -42,13 +42,6 @@ async function getNextId(client, tableName, idColumn) {
   return Number(result.rows[0].next_id);
 }
 
-async function ensureResponseStatusColumn(client = pool) {
-  await client.query(`
-    ALTER TABLE response
-    ADD COLUMN IF NOT EXISTS response_status TEXT DEFAULT 'open'
-  `);
-}
-
 function formatReport(row) {
   return {
     reportId: String(row.report_number),
@@ -79,8 +72,6 @@ async function fetchMyReports(req, res) {
     if (!currentUser) {
       return res.status(401).json({ message: 'Потрібно увійти в систему.' });
     }
-
-    await ensureResponseStatusColumn();
 
     const result = await pool.query(
       `
@@ -175,7 +166,6 @@ async function createReport(req, res) {
     }
 
     await client.query('BEGIN');
-    await ensureResponseStatusColumn(client);
 
     const postResult = await client.query(
       `

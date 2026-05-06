@@ -3,9 +3,6 @@
     author: 'Звіт про отримання допомоги',
     helper: 'Звіт про надання допомоги',
   };
-  const runtimeState = {
-    deletedOwnedPosts: {},
-  };
   const apiState = {
     posts: [],
     responses: [],
@@ -526,12 +523,6 @@
   }
 
   function applyStatusToRequestCards() {
-    document.querySelectorAll('[data-owned-post-id]').forEach((card) => {
-      const postId = card.dataset.ownedPostId;
-      if (!postId) return;
-      card.classList.toggle('hidden', Boolean(runtimeState.deletedOwnedPosts[postId]));
-    });
-
     document.querySelectorAll('.post[data-request-id]').forEach((card) => {
       const requestId = card.dataset.requestId;
       const requestContext = card.dataset.requestContext;
@@ -861,39 +852,6 @@
     input.value = '';
   }
 
-  function updateStaticPostCard(postId, data) {
-    document.querySelectorAll(`[data-owned-post-id="${postId}"], .post[data-request-id="${postId}"]`).forEach((card) => {
-      const typeSelectStatus = data.type === 'request';
-      if (card.dataset.requestId !== undefined && !typeSelectStatus) {
-        delete card.dataset.requestId;
-        delete card.dataset.requestStatus;
-      }
-
-      if (typeSelectStatus) {
-        card.dataset.requestId = postId;
-        card.dataset.requestStatus = 'open';
-      }
-
-      const title = card.querySelector('.post-title');
-      const description = card.querySelector('.post-description');
-      const tagsContainer = card.querySelector('.profile-tags');
-      const photos = card.querySelector('.post-photos');
-      const statusElement = card.querySelector('.request-status');
-
-      if (title) title.textContent = data.title;
-      if (description) description.textContent = data.description;
-      if (tagsContainer) tagsContainer.innerHTML = buildTags(data.tags);
-      if (photos) photos.innerHTML = buildImages(data.images);
-
-      if (statusElement && typeSelectStatus) {
-        const status = 'open';
-        statusElement.textContent = status === 'closed' ? 'Закритий' : 'Відкритий';
-        statusElement.classList.toggle('is-open', status !== 'closed');
-        statusElement.classList.toggle('is-closed', status === 'closed');
-      }
-    });
-  }
-
   async function syncRequestUI() {
     await Promise.all([
       loadPostsFromServer(),
@@ -994,28 +952,27 @@
       if (!card) return;
 
       const postId = card.dataset.ownedPostId || card.dataset.requestId;
-      if (/^\d+$/.test(String(postId))) {
-        fetch(`/posts/${postId}`, {
-          method: 'DELETE',
-          credentials: 'same-origin',
-        })
-          .then(async (response) => {
-            if (!response.ok) {
-              const result = await response.json().catch(() => ({}));
-              throw new Error(result.message || 'Не вдалося видалити допис.');
-            }
-
-            await syncRequestUI();
-          })
-          .catch((error) => {
-            console.error('Помилка видалення допису:', error);
-            alert(error.message || 'Не вдалося видалити допис.');
-          });
+      if (!/^\d+$/.test(String(postId))) {
+        alert('Unable to determine the post for deletion.');
         return;
       }
 
-      runtimeState.deletedOwnedPosts[postId] = true;
-      void syncRequestUI();
+      fetch(`/posts/${postId}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            throw new Error(result.message || 'Could not delete the post.');
+          }
+
+          await syncRequestUI();
+        })
+        .catch((error) => {
+          console.error('Post deletion error:', error);
+          alert(error.message || 'Could not delete the post.');
+        });
     }
 
     const viewReportButton = event.target.closest('.view-report-button');
@@ -1089,33 +1046,31 @@
         images: readImagesFromForm(editPostForm),
       };
 
-      if (/^\d+$/.test(String(postId))) {
-        try {
-          const response = await fetch(`/posts/${postId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify(payload),
-          });
-
-          const result = await response.json();
-          if (!response.ok) {
-            alert(result.message || 'Не вдалося оновити допис.');
-            return;
-          }
-
-          closeSharedModal('post-modal');
-          await syncRequestUI();
-        } catch (error) {
-          console.error('Помилка оновлення допису:', error);
-          alert('Не вдалося оновити допис. Спробуйте пізніше.');
-        }
+      if (!/^\d+$/.test(String(postId))) {
+        alert('Unable to determine the post for editing.');
         return;
       }
 
-      updateStaticPostCard(postId, payload);
-      closeSharedModal('post-modal');
-      applyStatusToRequestCards();
+      try {
+        const response = await fetch(`/posts/${postId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          alert(result.message || 'Could not update the post.');
+          return;
+        }
+
+        closeSharedModal('post-modal');
+        await syncRequestUI();
+      } catch (error) {
+        console.error('Post update error:', error);
+        alert('Could not update the post. Please try again later.');
+      }
       return;
     }
 

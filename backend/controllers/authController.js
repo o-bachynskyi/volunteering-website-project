@@ -16,16 +16,6 @@ const ROLE_BY_ID = Object.fromEntries(
   Object.values(ROLE_CONFIG).map((role) => [role.id, role])
 );
 
-async function ensureUserTagTableExists(client = pool) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS user_tag (
-      user_rnokpp VARCHAR(32) NOT NULL,
-      tag_id INTEGER NOT NULL,
-      PRIMARY KEY (user_rnokpp, tag_id)
-    )
-  `);
-}
-
 async function ensureRolesExist() {
   await pool.query(
     `
@@ -131,8 +121,6 @@ async function getOrCreateTagId(client, tagName) {
 }
 
 async function findUserByEmail(email) {
-  await ensureUserTagTableExists();
-
   const result = await pool.query(
     `
       SELECT
@@ -153,8 +141,6 @@ async function findUserByEmail(email) {
 }
 
 async function findUserByRnokpp(rnokpp) {
-  await ensureUserTagTableExists();
-
   const result = await pool.query(
     `
       SELECT
@@ -227,7 +213,6 @@ async function registerUser(req, res) {
 
   try {
     await ensureRolesExist();
-    await ensureUserTagTableExists();
 
     const existingByEmail = await findUserByEmail(normalizedEmail);
     if (existingByEmail) {
@@ -371,7 +356,6 @@ async function updateUserProfile(req, res) {
     }
 
     await client.query('BEGIN');
-    await ensureUserTagTableExists(client);
 
     await client.query(
       `

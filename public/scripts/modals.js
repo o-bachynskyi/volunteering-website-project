@@ -1,5 +1,7 @@
 import { initTogglePassword } from './toggle-password.js';
 
+let escapeHandlerBound = false;
+
 document.addEventListener('DOMContentLoaded', () => {
   const loginButton = document.getElementById('login-button');
   const addPostButton = document.getElementById('add-post-button');
@@ -116,44 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.readAsDataURL(file);
   });
 
-  document.addEventListener('submit', async (e) => {
-    const profileForm = e.target.closest('#edit-profile-form');
-    if (!profileForm) {
-      return;
-    }
-
-    e.preventDefault();
-
-    const fullName = profileForm.querySelector('#profile-title')?.value.trim() || '';
-    const description = profileForm.querySelector('#profile-text')?.value.trim() || '';
-    const imageUrl = profileForm.querySelector('.profile-picture')?.getAttribute('src') || '';
-
-    try {
-      const response = await fetch('/auth/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          full_name: fullName,
-          description,
-          image_url: imageUrl,
-        }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        alert(result.message || 'Не вдалося оновити профіль.');
-        return;
-      }
-
-      window.AuthState?.setUser(result.user);
-      closeModal();
-    } catch (error) {
-      console.error('Помилка оновлення профілю:', error);
-      alert('Не вдалося оновити профіль. Спробуйте пізніше.');
-    }
-  });
-
   logoutButton?.addEventListener('click', async () => {
     try {
       await fetch('/auth/logout', {
@@ -161,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         credentials: 'same-origin',
       });
     } catch (error) {
-      console.error('Помилка виходу:', error);
+      console.error('РџРѕРјРёР»РєР° РІРёС…РѕРґСѓ:', error);
     }
 
     window.AuthState?.clear();
@@ -182,14 +146,14 @@ function wireLoginRegistrationModal() {
 
   regLink?.addEventListener('click', (e) => {
     e.preventDefault();
-    heading.textContent = 'Реєстрація';
+    heading.textContent = 'Р РµС”СЃС‚СЂР°С†С–СЏ';
     registrationForm.classList.add('active-modal');
     loginForm.classList.remove('active-modal');
   });
 
   loginLink?.addEventListener('click', (e) => {
     e.preventDefault();
-    heading.textContent = 'Вхід';
+    heading.textContent = 'Р’С…С–Рґ';
     loginForm.classList.add('active-modal');
     registrationForm.classList.remove('active-modal');
   });
@@ -210,15 +174,15 @@ function wireLoginRegistrationModal() {
 
       const result = await response.json();
       if (!response.ok) {
-        alert(result.message || 'Невірний email або пароль.');
+        alert(result.message || 'РќРµРІС–СЂРЅРёР№ email Р°Р±Рѕ РїР°СЂРѕР»СЊ.');
         return;
       }
 
       window.AuthState?.setUser(result.user);
       closeModal();
     } catch (error) {
-      console.error('Помилка входу:', error);
-      alert('Сервер недоступний. Спробуйте пізніше.');
+      console.error('РџРѕРјРёР»РєР° РІС…РѕРґСѓ:', error);
+      alert('РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРЅРёР№. РЎРїСЂРѕР±СѓР№С‚Рµ РїС–Р·РЅС–С€Рµ.');
     }
   });
 
@@ -247,7 +211,7 @@ function wireLoginRegistrationModal() {
 
       const result = await response.json();
       if (!response.ok) {
-        alert(result.message || 'Помилка реєстрації.');
+        alert(result.message || 'РџРѕРјРёР»РєР° СЂРµС”СЃС‚СЂР°С†С–С—.');
         return;
       }
 
@@ -255,13 +219,18 @@ function wireLoginRegistrationModal() {
       window.AuthState?.setUser(result.user);
       closeModal();
     } catch (error) {
-      console.error('Помилка реєстрації:', error);
-      alert('Сталася помилка. Спробуйте пізніше.');
+      console.error('РџРѕРјРёР»РєР° СЂРµС”СЃС‚СЂР°С†С–С—:', error);
+      alert('РЎС‚Р°Р»Р°СЃСЏ РїРѕРјРёР»РєР°. РЎРїСЂРѕР±СѓР№С‚Рµ РїС–Р·РЅС–С€Рµ.');
     }
   });
 }
 
 function bindSharedModalClose() {
+  if (escapeHandlerBound) {
+    return;
+  }
+
+  escapeHandlerBound = true;
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeModal();
@@ -280,7 +249,7 @@ function showLoginModal() {
     return;
   }
 
-  heading.textContent = 'Вхід';
+  heading.textContent = 'Р’С…С–Рґ';
   loginForm.classList.add('active-modal');
   registrationForm.classList.remove('active-modal');
 
@@ -298,7 +267,7 @@ function showAddEditPostModal(mode = 'add') {
     return;
   }
 
-  heading.textContent = mode === 'edit' ? 'Редагувати допис' : 'Створити допис';
+  heading.textContent = mode === 'edit' ? 'Р РµРґР°РіСѓРІР°С‚Рё РґРѕРїРёСЃ' : 'РЎС‚РІРѕСЂРёС‚Рё РґРѕРїРёСЃ';
   overlay.classList.remove('hidden');
   modal.classList.remove('hidden');
   document.body.classList.add('modal-open');
