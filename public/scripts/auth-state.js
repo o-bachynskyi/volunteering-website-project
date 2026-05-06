@@ -32,6 +32,30 @@
     }
   }
 
+  function escapeHtml(text = '') {
+    return String(text)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function renderProfileTags(tags = []) {
+    const container = document.querySelector('.user-profile #user-profile-tags');
+    if (!container) {
+      return;
+    }
+
+    container.innerHTML = tags.length
+      ? tags.map((tag) => `
+          <div class="profile-tag">
+            <p class="profile-tag-title">${escapeHtml(tag)}</p>
+          </div>
+        `).join('')
+      : '';
+  }
+
   function updateHeaderUi() {
     document.getElementById('login-button')?.classList.toggle('hidden', state.authenticated);
     document.getElementById('add-post-button')?.classList.toggle('hidden', !state.authenticated);
@@ -54,6 +78,7 @@
       setText('.user-profile .profile-description', 'Увійдіть у систему, щоб переглянути та редагувати власний профіль.');
       setImage('.user-profile .profile-header img', defaultAvatar);
       setImage('#profile-button img', defaultAvatar);
+      renderProfileTags([]);
       return;
     }
 
@@ -62,6 +87,7 @@
     setText('.user-profile .profile-description', user.description || 'Опис поки що не заповнений.');
     setImage('.user-profile .profile-header img', user.image_url || defaultAvatar);
     setImage('#profile-button img', user.image_url || defaultAvatar);
+    renderProfileTags(user.tags || []);
   }
 
   function setAuthenticatedUser(user) {
