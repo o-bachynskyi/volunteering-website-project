@@ -51,7 +51,15 @@ cd "D:\VS Code Projects\volunteering-website-project-main"
 npm install
 ```
 
-3. Запустити сервер:
+3. Створити локальний `.env` на основі шаблону:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+4. Заповнити в `.env` потрібні значення для БД та пошти.
+
+5. Запустити сервер:
 
 ```powershell
 npm start
@@ -92,28 +100,19 @@ node scripts/refresh-demo-data.js
 
 Після створення нового відгуку бекенд може надіслати автору запиту лист на email.
 
-Для цього потрібно задати змінні середовища:
+Для цього потрібно задати змінні в `.env`:
 
-```powershell
-$env:SMTP_HOST="smtp.gmail.com"
-$env:SMTP_PORT="587"
-$env:SMTP_SECURE="false"
-$env:SMTP_USER="your_email@gmail.com"
-$env:SMTP_PASS="your_app_password"
-$env:SMTP_FROM="Volunteering Website <your_email@gmail.com>"
-$env:APP_BASE_URL="http://localhost:3000"
-```
-
-Після цього запустити сервер:
-
-```powershell
-npm start
+```env
+MAILJET_API_KEY=your_mailjet_api_key
+MAILJET_SECRET_KEY=your_mailjet_secret_key
+SMTP_FROM=Volunteering Website <verified_sender@example.com>
+APP_BASE_URL=http://localhost:3000
 ```
 
 Примітка:
 
-- для Gmail зазвичай потрібно використовувати `App Password`, а не звичайний пароль
-- якщо SMTP-змінні не задані, відгук все одно збережеться в БД, але лист не відправиться
+- зараз у проєкті вже використовується `Mailjet API`
+- якщо змінні пошти не задані, відгук все одно збережеться в БД, але лист не відправиться
 
 ## Корисні маршрути
 
@@ -128,3 +127,30 @@ npm start
 ## Примітка
 
 У проєкті ще можуть залишатися окремі старі статичні тексти або візуальні дрібниці, але основний робочий сценарій у `backend-work` уже переведений із заглушок на реальні дані з бази.
+## Render Deploy
+
+This repository includes a ready `render.yaml` for a free Render web service in the `frankfurt` region.
+
+Recommended branch for deploy:
+
+- `backend-work`
+
+Required environment variables in Render:
+
+- `DATABASE_URL`
+- `MAILJET_API_KEY`
+- `MAILJET_SECRET_KEY`
+- `SMTP_FROM`
+- `APP_BASE_URL`
+
+Recommended values:
+
+- `DATABASE_URL` = your Neon connection string
+- `SMTP_FROM` = `Volunteering Website <ipz22-a.bachynskyi@nubip.edu.ua>`
+- `APP_BASE_URL` = your Render public URL, for example `https://your-service.onrender.com`
+
+The service uses:
+
+- build command: `npm install`
+- start command: `npm start`
+- health check path: `/health`
