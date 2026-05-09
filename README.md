@@ -88,6 +88,33 @@ node scripts/refresh-demo-data.js
 - створює демонстраційних користувачів
 - додає приклади зборів і запитів, схожі на старі заглушки
 
+## Email-сповіщення про відгук
+
+Після створення нового відгуку бекенд може надіслати автору запиту лист на email.
+
+Для цього потрібно задати змінні середовища:
+
+```powershell
+$env:SMTP_HOST="smtp.gmail.com"
+$env:SMTP_PORT="587"
+$env:SMTP_SECURE="false"
+$env:SMTP_USER="your_email@gmail.com"
+$env:SMTP_PASS="your_app_password"
+$env:SMTP_FROM="Volunteering Website <your_email@gmail.com>"
+$env:APP_BASE_URL="http://localhost:3000"
+```
+
+Після цього запустити сервер:
+
+```powershell
+npm start
+```
+
+Примітка:
+
+- для Gmail зазвичай потрібно використовувати `App Password`, а не звичайний пароль
+- якщо SMTP-змінні не задані, відгук все одно збережеться в БД, але лист не відправиться
+
 ## Корисні маршрути
 
 - `GET /health`

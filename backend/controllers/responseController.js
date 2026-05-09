@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { readSessionPayload } = require('../session');
+const { sendResponseNotification } = require('../services/mailer');
 
 function getDefaultAvatar(roleCode) {
   return roleCode === 'mi'
@@ -177,8 +178,12 @@ async function createResponse(req, res) {
           p.post_id,
           p.user_rnokpp,
           p.post_type_id,
-          p.post_status
+          p.post_status,
+          p.post_title,
+          owner.user_name AS owner_name,
+          owner.user_email AS owner_email
         FROM post p
+        LEFT JOIN app_user owner ON owner.user_rnokpp = p.user_rnokpp
         WHERE p.post_id = $1
       `,
       [postId]
@@ -259,6 +264,20 @@ async function createResponse(req, res) {
     }
 
     await client.query('COMMIT');
+
+    try {
+      await sendResponseNotification({
+        postOwnerEmail: post.owner_email,
+        postOwnerName: post.owner_name,
+        responderName: currentUser.user_name,
+        postTitle: post.post_title,
+        responseTitle: title,
+        responseDescription: description,
+      });
+    } catch (mailError) {
+      console.error('Не вдалося надіслати email-сповіщення про відгук:', mailError);
+    }
+
     return res.status(201).json({
       message: 'Відгук успішно надіслано.',
       response: {
