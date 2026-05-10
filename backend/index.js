@@ -13,8 +13,16 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const rootDir = path.resolve(__dirname, '..');
 const publicDir = path.join(rootDir, 'public');
+const appShellPath = path.join(publicDir, 'pages', 'index.html');
+const appPages = new Set([
+  'requests',
+  'accepted-requests',
+  'reports',
+  'military',
+  'volunteers',
+]);
 
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 app.use('/public', express.static(publicDir));
 app.use('/auth', authRoutes);
 app.use('/posts', postRoutes);
@@ -37,7 +45,15 @@ app.get('/', (req, res) => {
 });
 
 app.get('/public/pages/index.html', (req, res) => {
-  res.sendFile(path.join(publicDir, 'pages', 'index.html'));
+  res.sendFile(appShellPath);
+});
+
+app.get('/public/:page.html', (req, res, next) => {
+  if (!appPages.has(req.params.page)) {
+    return next();
+  }
+
+  res.sendFile(appShellPath);
 });
 
 app.listen(PORT, async () => {

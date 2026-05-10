@@ -7,6 +7,72 @@ function escapeHtml(text = '') {
     .replaceAll("'", '&#39;');
 }
 
+function getDefaultProfileImage(user) {
+  return user?.role_code === 'mi'
+    ? '/public/images/account-icon.png'
+    : '/public/images/premium_photo-1689568126014-06fea9d5d341.jpg';
+}
+
+function isAllowedProfileImageType(file) {
+  return [
+    'image/jpeg',
+    'image/jpg',
+    'image/pjpeg',
+    'image/png',
+    'image/x-png',
+    'image/webp',
+    'image/bmp',
+  ].includes(file?.type);
+}
+
+function wireProfileImageControls(form, user) {
+  const image = form.querySelector('.profile-picture');
+  const imageInput = form.querySelector('#profile-image-upload');
+  const deleteButton = form.querySelector('.delete-profile-picture');
+
+  if (!image || !imageInput || !deleteButton) {
+    return;
+  }
+
+  const fallbackImage = getDefaultProfileImage(user);
+
+  imageInput.onchange = () => {
+    const [file] = imageInput.files || [];
+    if (!file) {
+      return;
+    }
+
+    if (!isAllowedProfileImageType(file)) {
+      if (file.type?.startsWith('video/')) {
+        alert('Для аватара можна використовувати лише фото. Відео не підтримуються.');
+      } else if (file.type === 'image/gif') {
+        alert('Гіфки для аватара не підтримуються. Додайте звичайне фото.');
+      } else {
+        alert('Для аватара можна використовувати лише фото у форматі JPG, JPEG, PNG, WEBP або BMP.');
+      }
+      imageInput.value = '';
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      alert('Фото профілю має бути не більше 8 МБ.');
+      imageInput.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      image.src = event.target?.result || fallbackImage;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  deleteButton.onclick = () => {
+    image.src = fallbackImage;
+    imageInput.value = '';
+  };
+}
+
 document.addEventListener('click', (event) => {
   if (!event.target.closest('#edit-profile-button')) {
     return;
@@ -43,6 +109,8 @@ document.addEventListener('click', (event) => {
       if (imageInput) {
         imageInput.value = '';
       }
+
+      wireProfileImageControls(form, user);
 
       if (tagInput) {
         tagInput.value = '';

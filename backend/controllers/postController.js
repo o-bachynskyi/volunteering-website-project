@@ -1,5 +1,16 @@
 const pool = require('../db');
 const { readSessionPayload } = require('../session');
+const { normalizeImageList } = require('../utils/imageValidation');
+const MAX_POST_IMAGE_COUNT = 5;
+const POST_ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
+  'image/png',
+  'image/x-png',
+  'image/webp',
+  'image/bmp',
+]);
 
 const POST_TYPE_CONFIG = {
   fundraising: { id: 1, code: 'fundraising', name: 'Збір коштів' },
@@ -9,11 +20,14 @@ const POST_TYPE_CONFIG = {
 const POST_TYPE_BY_ID = Object.fromEntries(
   Object.values(POST_TYPE_CONFIG).map((type) => [type.id, type])
 );
-
 function getDefaultAvatar(roleCode) {
   return roleCode === 'mi'
     ? '/public/images/account-icon.png'
     : '/public/images/premium_photo-1689568126014-06fea9d5d341.jpg';
+}
+
+function getRoleCode(user) {
+  return Number(user?.role_id) === 2 ? 'mi' : 'vo';
 }
 
 function formatPost(row) {
@@ -41,6 +55,9 @@ function formatPost(row) {
     createdAtIso: row.post_datetime ? new Date(row.post_datetime).toISOString() : new Date().toISOString(),
     tags: row.tags || [],
     images: row.images || [],
+    responseCount: Number(row.response_count || 0),
+    reportCount: Number(row.report_count || 0),
+    hasLinkedActivity: Number(row.response_count || 0) > 0 || Number(row.report_count || 0) > 0,
     isOwnPost: false,
   };
 }
@@ -90,13 +107,23 @@ function normalizeTags(tags) {
 }
 
 function normalizeImages(images) {
-  if (!Array.isArray(images)) {
-    return [];
+  return normalizeImageList(images, POST_ALLOWED_IMAGE_TYPES);
+}
+
+function validateOriginalImageList(rawImages, normalizedImages) {
+  if (!Array.isArray(rawImages)) {
+    return null;
   }
 
-  return images
+  const providedImages = rawImages
     .map((image) => String(image || '').trim())
     .filter(Boolean);
+
+  if (providedImages.length !== normalizedImages.length) {
+    return 'Можна додавати лише фото у форматі JPG, JPEG, PNG, WEBP або BMP. Гіфки для дописів не підтримуються.';
+  }
+
+  return null;
 }
 
 function validatePostPayload({ type, title, description }) {
@@ -111,6 +138,14 @@ function validatePostPayload({ type, title, description }) {
 
   if (!description?.trim()) {
     return 'Вкажіть текст допису.';
+  }
+
+  return null;
+}
+
+function validatePostImages(images) {
+  if (images.length > MAX_POST_IMAGE_COUNT) {
+    return `\u0414\u043e \u043e\u0434\u043d\u043e\u0433\u043e \u0434\u043e\u043f\u0438\u0441\u0443 \u043c\u043e\u0436\u043d\u0430 \u0434\u043e\u0434\u0430\u0442\u0438 \u043d\u0435 \u0431\u0456\u043b\u044c\u0448\u0435 ${MAX_POST_IMAGE_COUNT} \u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u044c.`;
   }
 
   return null;
@@ -200,6 +235,8 @@ async function fetchPosts(req, res) {
           u.user_image_url,
           u.role_id,
           r.role_name,
+          COUNT(DISTINCT resp.response_id)::int AS response_count,
+          COUNT(DISTINCT rep.report_number)::int AS report_count,
           COALESCE(array_remove(array_agg(DISTINCT t.tag_name), NULL), '{}') AS tags,
           COALESCE(array_remove(array_agg(DISTINCT pi.post_image_url), NULL), '{}') AS images
         FROM post p
@@ -209,6 +246,8 @@ async function fetchPosts(req, res) {
         LEFT JOIN post_tag ptg ON ptg.post_id = p.post_id
         LEFT JOIN tag t ON t.tag_id = ptg.tag_id
         LEFT JOIN post_image pi ON pi.post_id = p.post_id
+        LEFT JOIN response resp ON resp.post_id = p.post_id
+        LEFT JOIN report rep ON rep.post_id = p.post_id
         ${whereClause}
         GROUP BY
           p.post_id,
@@ -250,6 +289,14 @@ async function createPost(req, res) {
   const { type, title, description } = req.body;
   const tags = normalizeTags(req.body.tags);
   const images = normalizeImages(req.body.images);
+  const invalidImageMessage = validateOriginalImageList(req.body.images, images);
+  if (invalidImageMessage) {
+    return res.status(400).json({ message: invalidImageMessage });
+  }
+  const imageValidationError = validatePostImages(images);
+  if (imageValidationError) {
+    return res.status(400).json({ message: imageValidationError });
+  }
   const postType = resolvePostType(type);
   const client = await pool.connect();
 
@@ -257,6 +304,10 @@ async function createPost(req, res) {
     const currentUser = await getCurrentUser(req);
     if (!currentUser) {
       return res.status(401).json({ message: 'Потрібно увійти в систему.' });
+    }
+
+    if (postType.code === 'request' && getRoleCode(currentUser) !== 'mi') {
+      return res.status(403).json({ message: 'Створювати запити на допомогу можуть лише військові.' });
     }
 
     await client.query('BEGIN');
@@ -360,6 +411,14 @@ async function updatePost(req, res) {
   const { type, title, description } = req.body;
   const tags = normalizeTags(req.body.tags);
   const images = normalizeImages(req.body.images);
+  const invalidImageMessage = validateOriginalImageList(req.body.images, images);
+  if (invalidImageMessage) {
+    return res.status(400).json({ message: invalidImageMessage });
+  }
+  const imageValidationError = validatePostImages(images);
+  if (imageValidationError) {
+    return res.status(400).json({ message: imageValidationError });
+  }
   const postType = resolvePostType(type);
   const client = await pool.connect();
 
@@ -367,6 +426,10 @@ async function updatePost(req, res) {
     const currentUser = await getCurrentUser(req);
     if (!currentUser) {
       return res.status(401).json({ message: 'Потрібно увійти в систему.' });
+    }
+
+    if (postType.code === 'request' && getRoleCode(currentUser) !== 'mi') {
+      return res.status(403).json({ message: 'Створювати запити на допомогу можуть лише військові.' });
     }
 
     await client.query('BEGIN');
@@ -467,6 +530,8 @@ async function updatePost(req, res) {
           u.user_image_url,
           u.role_id,
           r.role_name,
+          COUNT(DISTINCT resp.response_id)::int AS response_count,
+          COUNT(DISTINCT rep.report_number)::int AS report_count,
           COALESCE(array_remove(array_agg(DISTINCT t.tag_name), NULL), '{}') AS tags,
           COALESCE(array_remove(array_agg(DISTINCT pi.post_image_url), NULL), '{}') AS images
         FROM post p
@@ -476,6 +541,8 @@ async function updatePost(req, res) {
         LEFT JOIN post_tag ptg ON ptg.post_id = p.post_id
         LEFT JOIN tag t ON t.tag_id = ptg.tag_id
         LEFT JOIN post_image pi ON pi.post_id = p.post_id
+        LEFT JOIN response resp ON resp.post_id = p.post_id
+        LEFT JOIN report rep ON rep.post_id = p.post_id
         WHERE p.post_id = $1
         GROUP BY
           p.post_id,
@@ -544,6 +611,24 @@ async function deletePost(req, res) {
     if (post.user_rnokpp !== currentUser.user_rnokpp) {
       await client.query('ROLLBACK');
       return res.status(403).json({ message: 'Ви не можете видалити чужий допис.' });
+    }
+
+    const linkedActivityResult = await client.query(
+      `
+        SELECT
+          (SELECT COUNT(*)::int FROM response WHERE post_id = $1) AS response_count,
+          (SELECT COUNT(*)::int FROM report WHERE post_id = $1) AS report_count
+      `,
+      [postId]
+    );
+
+    const responseCount = Number(linkedActivityResult.rows[0]?.response_count || 0);
+    const reportCount = Number(linkedActivityResult.rows[0]?.report_count || 0);
+    if (responseCount > 0 || reportCount > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        message: 'Не можна видалити допис, якщо з ним уже пов’язані відгуки або звіти.',
+      });
     }
 
     await client.query('DELETE FROM post_tag WHERE post_id = $1', [postId]);

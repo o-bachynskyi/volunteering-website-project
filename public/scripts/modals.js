@@ -123,10 +123,13 @@ function wireLoginRegistrationModal() {
   loginForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const submitButton = loginForm.querySelector('.submit-button');
     const email = loginForm.querySelector('#email_login')?.value.trim();
     const password = loginForm.querySelector('#password_login')?.value;
 
     try {
+      window.LoadingUi?.setButtonLoading(submitButton, true, 'Входимо...');
+
       const response = await fetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,12 +148,15 @@ function wireLoginRegistrationModal() {
     } catch (error) {
       console.error('Помилка входу:', error);
       alert('Сервер недоступний. Спробуйте пізніше.');
+    } finally {
+      window.LoadingUi?.setButtonLoading(submitButton, false);
     }
   });
 
   registrationForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const submitButton = registrationForm.querySelector('.submit-button');
     const fullName = registrationForm.querySelector('#username_registration')?.value.trim();
     const rnokpp = registrationForm.querySelector('#rnokpp_registration')?.value.trim();
     const email = registrationForm.querySelector('#email_registration')?.value.trim();
@@ -158,6 +164,8 @@ function wireLoginRegistrationModal() {
     const roleId = registrationForm.querySelector('#role')?.value;
 
     try {
+      window.LoadingUi?.setButtonLoading(submitButton, true, 'Реєструємо...');
+
       const response = await fetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,6 +191,8 @@ function wireLoginRegistrationModal() {
     } catch (error) {
       console.error('Помилка реєстрації:', error);
       alert('Сталася помилка. Спробуйте пізніше.');
+    } finally {
+      window.LoadingUi?.setButtonLoading(submitButton, false);
     }
   });
 }
@@ -228,6 +238,22 @@ function showAddEditPostModal(mode = 'add') {
   overlay.classList.remove('hidden');
   modal.classList.remove('hidden');
   document.body.classList.add('modal-open');
+
+  const user = window.AuthState?.getUser?.();
+  const isMilitary = user?.role_code === 'mi';
+  modal.querySelectorAll('select[name="type"]').forEach((select) => {
+    const requestOption = Array.from(select.options).find((option) => option.value === 'request');
+    if (!requestOption) {
+      return;
+    }
+
+    requestOption.hidden = !isMilitary;
+    requestOption.disabled = !isMilitary;
+
+    if (!isMilitary && select.value === 'request') {
+      select.value = 'fundraising';
+    }
+  });
 }
 
 function closeModal() {

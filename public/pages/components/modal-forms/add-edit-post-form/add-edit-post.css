@@ -215,6 +215,22 @@
     height: 24px;
 }
 
+.image-upload-hint,
+.image-upload-error {
+    margin: 4px 8px 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.image-upload-hint {
+    color: #666666;
+}
+
+.image-upload-error {
+    color: #d64545;
+}
+
 .post-text-input select {
     appearance: none;
     -webkit-appearance: none;

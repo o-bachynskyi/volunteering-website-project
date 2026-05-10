@@ -1,5 +1,15 @@
 const bcrypt = require('bcrypt');
 const pool = require('../db');
+const { normalizeSingleImage } = require('../utils/imageValidation');
+const PROFILE_ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
+  'image/png',
+  'image/x-png',
+  'image/webp',
+  'image/bmp',
+]);
 const {
   clearSessionCookie,
   createSessionToken,
@@ -15,6 +25,12 @@ const ROLE_CONFIG = {
 const ROLE_BY_ID = Object.fromEntries(
   Object.values(ROLE_CONFIG).map((role) => [role.id, role])
 );
+
+function getDefaultAvatar(roleCode) {
+  return roleCode === 'mi'
+    ? '/public/images/account-icon.png'
+    : '/public/images/premium_photo-1689568126014-06fea9d5d341.jpg';
+}
 
 async function ensureUserTagTableExists(client = pool) {
   await client.query(`
@@ -72,7 +88,7 @@ function normalizeUser(user) {
     role_code: role.code,
     role_name: role.name,
     description: user.user_description || '',
-    image_url: user.user_image_url || '',
+    image_url: user.user_image_url || getDefaultAvatar(role.code),
     tags: user.tags || [],
   };
 }
@@ -262,7 +278,7 @@ async function registerUser(req, res) {
         normalizedEmail,
         passwordHash,
         '',
-        '',
+        getDefaultAvatar(role.code),
       ]
     );
 
@@ -361,6 +377,12 @@ async function updateUserProfile(req, res) {
   }
 
   const tags = normalizeTags(req.body.tags);
+  const normalizedImageUrl = normalizeSingleImage(image_url, PROFILE_ALLOWED_IMAGE_TYPES);
+  if (String(image_url || '').trim() && !normalizedImageUrl) {
+    return res.status(400).json({
+      message: 'Для аватара можна використовувати лише фото у форматі JPG, JPEG, PNG, WEBP або BMP.',
+    });
+  }
   const client = await pool.connect();
 
   try {
@@ -386,7 +408,7 @@ async function updateUserProfile(req, res) {
         user.user_rnokpp,
         full_name.trim(),
         String(description || '').trim(),
-        String(image_url || '').trim(),
+        normalizedImageUrl || getDefaultAvatar(user.role_id === 2 ? 'mi' : 'vo'),
       ]
     );
 

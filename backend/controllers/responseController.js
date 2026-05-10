@@ -1,11 +1,16 @@
 const pool = require('../db');
 const { readSessionPayload } = require('../session');
 const { sendResponseNotification } = require('../services/mailer');
+const { normalizeImageList } = require('../utils/imageValidation');
 
 function getDefaultAvatar(roleCode) {
   return roleCode === 'mi'
     ? '/public/images/account-icon.png'
     : '/public/images/premium_photo-1689568126014-06fea9d5d341.jpg';
+}
+
+function isVolunteer(user) {
+  return Number(user?.role_id) === 1;
 }
 
 async function getCurrentUser(req) {
@@ -42,13 +47,7 @@ async function ensureResponseStatusColumn(client = pool) {
 }
 
 function normalizeImages(images) {
-  if (!Array.isArray(images)) {
-    return [];
-  }
-
-  return images
-    .map((image) => String(image || '').trim())
-    .filter(Boolean);
+  return normalizeImageList(images);
 }
 
 function formatAcceptedRequest(row, currentUser) {
@@ -167,6 +166,10 @@ async function createResponse(req, res) {
     const currentUser = await getCurrentUser(req);
     if (!currentUser) {
       return res.status(401).json({ message: 'Потрібно увійти в систему.' });
+    }
+
+    if (!isVolunteer(currentUser)) {
+      return res.status(403).json({ message: 'Відгукатися на запити можуть лише волонтери.' });
     }
 
     await client.query('BEGIN');

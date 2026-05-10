@@ -29,6 +29,14 @@
     return window.AuthState?.getUser()?.rnokpp || null;
   }
 
+  function getCurrentUserRoleCode() {
+    return window.AuthState?.getUser()?.role_code || null;
+  }
+
+  function canCurrentUserRespondToRequests() {
+    return !isLoggedIn() || getCurrentUserRoleCode() === 'vo';
+  }
+
   function isLoggedIn() {
     return Boolean(window.AuthState?.isLoggedIn());
   }
@@ -49,15 +57,77 @@
     }).format(date);
   }
 
+  function getSortableTimestamp(entry) {
+    if (!entry) return 0;
+
+    const directTimestamp = Number(entry.createdAt);
+    if (Number.isFinite(directTimestamp) && directTimestamp > 0) {
+      return directTimestamp;
+    }
+
+    if (entry.createdAtIso) {
+      const parsedIso = new Date(entry.createdAtIso).getTime();
+      if (Number.isFinite(parsedIso)) {
+        return parsedIso;
+      }
+    }
+
+    return 0;
+  }
+
+  function pluralizeUkrainian(value, forms) {
+    const normalized = Math.abs(value) % 100;
+    const lastDigit = normalized % 10;
+
+    if (normalized > 10 && normalized < 20) {
+      return forms[2];
+    }
+
+    if (lastDigit === 1) {
+      return forms[0];
+    }
+
+    if (lastDigit >= 2 && lastDigit <= 4) {
+      return forms[1];
+    }
+
+    return forms[2];
+  }
+
   function formatDateTextForCard(timestamp) {
     if (!timestamp) return 'щойно';
-    const diff = Date.now() - timestamp;
-    const oneHour = 60 * 60 * 1000;
-    const oneDay = 24 * oneHour;
 
-    if (diff < oneHour) return 'щойно';
-    if (diff < oneDay) return `${Math.max(1, Math.floor(diff / oneHour))} год.`;
-    return `${Math.max(1, Math.floor(diff / oneDay))} дн.`;
+    const numericTimestamp = Number(timestamp);
+    const diff = Math.max(0, Date.now() - numericTimestamp);
+    const oneMinute = 60 * 1000;
+    const oneHour = 60 * oneMinute;
+    const oneDay = 24 * oneHour;
+    const oneWeek = 7 * oneDay;
+
+    if (diff < oneMinute) {
+      return 'щойно';
+    }
+
+    if (diff < oneHour) {
+      const minutes = Math.max(1, Math.floor(diff / oneMinute));
+      return `${minutes} ${pluralizeUkrainian(minutes, ['хвилину', 'хвилини', 'хвилин'])} тому`;
+    }
+
+    if (diff < oneDay) {
+      const hours = Math.max(1, Math.floor(diff / oneHour));
+      return `${hours} ${pluralizeUkrainian(hours, ['годину', 'години', 'годин'])} тому`;
+    }
+
+    if (diff >= oneWeek) {
+      return new Intl.DateTimeFormat('uk-UA', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(new Date(numericTimestamp));
+    }
+
+    const days = Math.max(1, Math.floor(diff / oneDay));
+    return `${days} ${pluralizeUkrainian(days, ['день', 'дні', 'днів'])} тому`;
   }
 
   function buildTags(tags = []) {
@@ -74,6 +144,32 @@
     return images.map((imageUrl) => `
       <img src="${escapeHtml(imageUrl)}" alt="post photo" class="photo">
     `).join('');
+  }
+
+  function renderDataLoadingState() {
+    window.LoadingUi?.showSectionLoader(
+      document.getElementById('generated-profile-posts'),
+      'Завантажуємо ваші дописи...'
+    );
+    window.LoadingUi?.showSectionLoader(
+      document.getElementById('generated-fundraiser-posts'),
+      'Завантажуємо збори...'
+    );
+    window.LoadingUi?.showSectionLoader(
+      document.getElementById('generated-request-feed-posts'),
+      'Завантажуємо запити...'
+    );
+    window.LoadingUi?.showSectionLoader(
+      document.getElementById('accepted-requests-list'),
+      'Завантажуємо прийняті запити...'
+    );
+    window.LoadingUi?.showSectionLoader(
+      document.getElementById('reports-list'),
+      'Завантажуємо звіти...'
+    );
+
+    document.getElementById('accepted-requests-empty')?.classList.add('hidden');
+    document.getElementById('reports-empty')?.classList.add('hidden');
   }
 
   async function loadPostsFromServer() {
@@ -187,7 +283,7 @@
         ...post,
         dateText: post.dateText || formatDateTextForCard(post.createdAt),
       }))
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      .sort((a, b) => getSortableTimestamp(b) - getSortableTimestamp(a));
   }
 
   function getOwnedPostsSorted() {
@@ -196,7 +292,48 @@
   }
 
   function getReportsSorted() {
-    return [...apiState.reports].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return [...apiState.reports].sort((a, b) => getSortableTimestamp(b) - getSortableTimestamp(a));
+  }
+
+  function normalizeSearchText(value = '') {
+    return value == null ? '' : String(value).trim().toLowerCase();
+  }
+
+  function getSearchState() {
+    return window.SearchState?.getState?.() || { query: '', tags: [] };
+  }
+
+  function isSearchActive() {
+    const { query, tags } = getSearchState();
+    return Boolean(query || tags.length);
+  }
+
+  function matchesSearchValue(value, query) {
+    if (!query) return true;
+    return normalizeSearchText(value).includes(query);
+  }
+
+  function hasMatchingTag(tags = [], selectedTags = []) {
+    if (!selectedTags.length) return true;
+
+    const normalizedTags = tags.map((tag) => normalizeSearchText(tag));
+    return selectedTags.every((tag) => normalizedTags.includes(tag));
+  }
+
+  function matchesSearchState(fields = [], tags = []) {
+    const { query, tags: selectedTags } = getSearchState();
+    const matchesQuery = !query || fields.some((field) => matchesSearchValue(field, query));
+    return matchesQuery && hasMatchingTag(tags, selectedTags);
+  }
+
+  function renderSearchEmptyState(container, message) {
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="search-empty-state">
+        <p class="search-empty-state-title">${escapeHtml(message)}</p>
+      </div>
+    `;
   }
 
   function buildAcceptedRequestCard(request) {
@@ -248,6 +385,14 @@
 
   function buildPublicRequestCard(request) {
     const isClosed = request.status === 'closed';
+    const answerButtonMarkup = canCurrentUserRespondToRequests()
+      ? `
+          <button class="answer-request-button" aria-label="Відгукнутись">
+            <span class="button-text">Відгукнутись</span>
+            <img class="button-icon" src="/public/images/answer-icon.png" alt="Відгук icon">
+          </button>
+        `
+      : '';
 
     return `
       <article class="post request-post-card" data-request-id="${escapeHtml(request.postId)}" data-request-status="${escapeHtml(request.status)}" data-request-context="request-feed">
@@ -264,10 +409,7 @@
               <p class="request-status ${isClosed ? 'is-closed' : 'is-open'}">${isClosed ? 'Закритий' : 'Відкритий'}</p>
             </div>
           </div>
-          <button class="answer-request-button" aria-label="Відгукнутись">
-            <span class="button-text">Відгукнутись</span>
-            <img class="button-icon" src="/public/images/answer-icon.png" alt="Відгук icon">
-          </button>
+          ${answerButtonMarkup}
         </header>
         <div class="post-content">
           ${request.tags?.length ? `<div class="profile-tags">${buildTags(request.tags)}</div>` : ''}
@@ -286,6 +428,7 @@
     }
 
     const isClosed = request.status === 'closed';
+    const canDeletePost = !request.hasLinkedActivity;
     const editAction = isClosed ? '' : `
       <button class="post-dropdown-item edit-post-button">
         <img src="/public/images/edit-icon.png" alt="edit post">
@@ -321,10 +464,12 @@
             <div class="post-more-dropdown hidden">
               ${editAction}
               ${closeAction}
-              <button class="post-dropdown-item delete-own-post-button">
-                <img src="/public/images/delete-icon.png" alt="delete post">
-                Видалити
-              </button>
+              ${canDeletePost ? `
+                <button class="post-dropdown-item delete-own-post-button">
+                  <img src="/public/images/delete-icon.png" alt="delete post">
+                  Видалити
+                </button>
+              ` : ''}
             </div>
           </div>
         </header>
@@ -341,6 +486,7 @@
   function buildProfileGeneratedPostCard(post) {
     const isRequest = post.type === 'request';
     const isClosed = post.status === 'closed';
+    const canDeletePost = !post.hasLinkedActivity;
     const requestStatus = isRequest ? `<p class="request-status ${isClosed ? 'is-closed' : 'is-open'}">${isClosed ? 'Закритий' : 'Відкритий'}</p>` : '';
     const requestActions = isRequest && !isClosed ? `
       <button class="post-dropdown-item close-request-button" data-report-role="author">
@@ -372,10 +518,12 @@
                 </button>
               `}
               ${requestActions}
-              <button class="post-dropdown-item delete-own-post-button">
-                <img src="/public/images/delete-icon.png" alt="delete post">
-                Видалити
-              </button>
+              ${canDeletePost ? `
+                <button class="post-dropdown-item delete-own-post-button">
+                  <img src="/public/images/delete-icon.png" alt="delete post">
+                  Видалити
+                </button>
+              ` : ''}
             </div>
           </div>
         </header>
@@ -390,6 +538,7 @@
   }
 
   function buildFundraiserCard(post) {
+    const canDeletePost = !post.hasLinkedActivity;
     const ownerActions = post.isOwnPost ? `
       <button class="post-more-button">
         <img src="/public/images/more-icon.png" alt="more">
@@ -399,10 +548,12 @@
           <img src="/public/images/edit-icon.png" alt="edit post">
           Редагувати
         </button>
-        <button class="post-dropdown-item delete-own-post-button">
-          <img src="/public/images/delete-icon.png" alt="delete post">
-          Видалити
-        </button>
+        ${canDeletePost ? `
+          <button class="post-dropdown-item delete-own-post-button">
+            <img src="/public/images/delete-icon.png" alt="delete post">
+            Видалити
+          </button>
+        ` : ''}
       </div>
     ` : '';
 
@@ -462,7 +613,18 @@
     const container = document.getElementById('generated-profile-posts');
     if (!container) return;
 
-    container.innerHTML = getOwnedPostsSorted()
+    const posts = getOwnedPostsSorted()
+      .filter((post) => matchesSearchState(
+        [post.title, post.description, post.authorName, post.authorRole],
+        post.tags
+      ));
+
+    if (!posts.length && isSearchActive()) {
+      renderSearchEmptyState(container, 'За вашим запитом у профілі нічого не знайдено.');
+      return;
+    }
+
+    container.innerHTML = posts
       .map((post) => buildProfileGeneratedPostCard({
         ...post,
         status: post.status,
@@ -474,20 +636,38 @@
     const container = document.getElementById('generated-fundraiser-posts');
     if (!container) return;
 
-    container.innerHTML = getAllPostsSorted()
+    const posts = getAllPostsSorted()
       .filter((post) => post.type === 'fundraising')
-      .map(buildFundraiserCard)
-      .join('');
+      .filter((post) => matchesSearchState(
+        [post.title, post.description, post.authorName, post.authorRole],
+        post.tags
+      ));
+
+    if (!posts.length && isSearchActive()) {
+      renderSearchEmptyState(container, 'За вашим запитом зборів не знайдено.');
+      return;
+    }
+
+    container.innerHTML = posts.map(buildFundraiserCard).join('');
   }
 
   function renderGeneratedRequestFeed() {
     const container = document.getElementById('generated-request-feed-posts');
     if (!container) return;
 
-    container.innerHTML = getAllPostsSorted()
+    const posts = getAllPostsSorted()
       .filter((post) => post.type === 'request')
-      .map((post) => buildRequestFeedCard(post))
-      .join('');
+      .filter((post) => matchesSearchState(
+        [post.title, post.description, post.authorName, post.authorRole, post.status],
+        post.tags
+      ));
+
+    if (!posts.length && isSearchActive()) {
+      renderSearchEmptyState(container, 'За вашим запитом запитів не знайдено.');
+      return;
+    }
+
+    container.innerHTML = posts.map((post) => buildRequestFeedCard(post)).join('');
   }
 
   function renderAcceptedRequests() {
@@ -495,9 +675,20 @@
     const empty = document.getElementById('accepted-requests-empty');
     if (!list || !empty) return;
 
-    const acceptedRequests = [...apiState.responses].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const acceptedRequests = [...apiState.responses]
+      .sort((a, b) => getSortableTimestamp(b) - getSortableTimestamp(a))
+      .filter((request) => matchesSearchState(
+        [request.title, request.description, request.authorName, request.authorRole, request.status],
+        request.tags
+      ));
 
     if (!acceptedRequests.length) {
+      if (isSearchActive()) {
+        empty.classList.add('hidden');
+        renderSearchEmptyState(list, 'За вашим запитом прийнятих запитів не знайдено.');
+        return;
+      }
+
       list.innerHTML = '';
       empty.classList.remove('hidden');
       return;
@@ -514,8 +705,26 @@
     const empty = document.getElementById('reports-empty');
     if (!list || !empty) return;
 
-    const reports = getReportsSorted();
+    const reports = getReportsSorted().filter((report) => matchesSearchState(
+      [
+        report.reportTitle,
+        report.description,
+        report.requestSnapshot?.title,
+        report.requestSnapshot?.description,
+        report.requestSnapshot?.authorName,
+        report.reporterUserName,
+        report.reporterUserRole,
+      ],
+      report.requestSnapshot?.tags || []
+    ));
+
     if (!reports.length) {
+      if (isSearchActive()) {
+        empty.classList.add('hidden');
+        renderSearchEmptyState(list, 'За вашим запитом звітів не знайдено.');
+        return;
+      }
+
       list.innerHTML = '';
       empty.classList.remove('hidden');
       return;
@@ -563,6 +772,13 @@
       }
 
       if (!answerButton) return;
+
+      if (!canCurrentUserRespondToRequests()) {
+        answerButton.classList.remove('is-accepted');
+        answerButton.classList.add('hidden');
+        answerButton.disabled = true;
+        return;
+      }
 
       if (status === 'closed') {
         answerButton.classList.remove('is-accepted');
@@ -831,6 +1047,37 @@
       .filter(Boolean);
   }
 
+  function getImageUploadErrorMessage(form) {
+    const errorElement = form?.querySelector('.image-upload-error');
+    const message = errorElement?.textContent?.trim() || '';
+    return message;
+  }
+
+  function clearImageUploadError(form) {
+    const errorElement = form?.querySelector('.image-upload-error');
+    if (!errorElement) return;
+
+    errorElement.textContent = '';
+    errorElement.classList.add('hidden');
+  }
+
+  function getBlockingImageUploadError(form) {
+    const message = getImageUploadErrorMessage(form);
+    if (!message) {
+      return '';
+    }
+
+    const imageCount = readImagesFromForm(form).length;
+    const maxImageCountMessage = 'Можна додати не більше 5 фото до одного допису.';
+
+    if (message === maxImageCountMessage && imageCount > 0 && imageCount <= 5) {
+      clearImageUploadError(form);
+      return '';
+    }
+
+    return message;
+  }
+
   function readTagsFromContainer(container) {
     return Array.from(container?.querySelectorAll('.post-tag-title, .profile-tag-title') || [])
       .map((tag) => tag.textContent.trim())
@@ -895,6 +1142,8 @@
   }
 
   async function syncRequestUI() {
+    renderDataLoadingState();
+
     await Promise.all([
       loadPostsFromServer(),
       loadResponsesFromServer(),
@@ -917,6 +1166,14 @@
   });
   document.addEventListener('auth:changed', () => {
     void syncRequestUI();
+  });
+  document.addEventListener('search:changed', () => {
+    renderGeneratedProfilePosts();
+    renderGeneratedFundraisers();
+    renderGeneratedRequestFeed();
+    renderAcceptedRequests();
+    renderReports();
+    applyStatusToRequestCards();
   });
 
   document.addEventListener('click', (event) => {
@@ -1034,6 +1291,13 @@
     if (addPostForm) {
       event.preventDefault();
 
+      const imageUploadError = getBlockingImageUploadError(addPostForm);
+      if (imageUploadError) {
+        window.LoadingUi?.clearAllLoadingButtons();
+        alert(imageUploadError);
+        return;
+      }
+
       const typeSelect = addPostForm.querySelector('select[name="type"]');
       const titleInput = addPostForm.querySelector('input[name="post-title"]');
       const descriptionInput = addPostForm.querySelector('textarea[name="post-text"]');
@@ -1077,6 +1341,13 @@
     const editPostForm = event.target.closest('#edit-post-form');
     if (editPostForm) {
       event.preventDefault();
+
+      const imageUploadError = getBlockingImageUploadError(editPostForm);
+      if (imageUploadError) {
+        window.LoadingUi?.clearAllLoadingButtons();
+        alert(imageUploadError);
+        return;
+      }
 
       const postId = editPostForm.dataset.postId;
       if (!postId) return;
@@ -1234,3 +1505,4 @@
     }
   });
 })();
+

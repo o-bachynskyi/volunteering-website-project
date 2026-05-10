@@ -1,5 +1,77 @@
+const searchForm = document.querySelector('.search-form');
 const searchInput = document.querySelector('.search-input');
 const tagsContainer = document.querySelector('.tags-container');
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
+  'image/png',
+  'image/x-png',
+  'image/webp',
+  'image/bmp',
+]);
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const MAX_POST_IMAGE_COUNT = 5;
+let resolvedImageUploadMessage = '';
+
+function normalizeSearchText(value = '') {
+  return value == null ? '' : String(value).trim().toLowerCase();
+}
+
+function getSearchTags() {
+  return Array.from(document.querySelectorAll('.tags-list .tag-title'))
+    .map((tag) => normalizeSearchText(tag.textContent))
+    .filter(Boolean);
+}
+
+function getSearchState() {
+  return {
+    query: normalizeSearchText(searchInput?.value || ''),
+    tags: getSearchTags(),
+  };
+}
+
+function dispatchSearchChange() {
+  document.dispatchEvent(new CustomEvent('search:changed', {
+    detail: getSearchState(),
+  }));
+}
+
+window.SearchState = {
+  getState: getSearchState,
+};
+
+function setImageUploadError(form, message = '') {
+  const errorElement = form?.querySelector('.image-upload-error');
+  if (!errorElement) return;
+
+  const nextMessage = message
+    ? (resolvedImageUploadMessage || message)
+    : '';
+
+  errorElement.textContent = nextMessage;
+  errorElement.classList.toggle('hidden', !nextMessage);
+}
+
+function getImageUploadErrorMessage(file) {
+  if (file.type?.startsWith('video/')) {
+    return 'Можна додавати лише фото. Відео для дописів не підтримуються.';
+  }
+
+  if (file.type === 'image/gif') {
+    return 'Гіфки для дописів не підтримуються. Додайте фото у форматі JPG, JPEG, PNG, WEBP або BMP.';
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    return 'Можна додавати лише фото у форматі JPG, JPEG, PNG, WEBP або BMP.';
+  }
+
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    return 'Розмір одного фото не може перевищувати 8 МБ.';
+  }
+
+  return '';
+}
 
 function isLoggedIn() {
   return Boolean(window.AuthState?.isLoggedIn());
@@ -16,6 +88,15 @@ function syncGuestUiState() {
 // Show on focus
 searchInput.addEventListener('focus', () => {
   tagsContainer.classList.remove('hidden');
+});
+
+searchInput.addEventListener('input', () => {
+  dispatchSearchChange();
+});
+
+searchForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  dispatchSearchChange();
 });
 
 // Hide when focus leaves both the input AND the tagsContainer
@@ -153,6 +234,10 @@ document.addEventListener('click', (e) => {
   if (closeBtn && closeBtn.closest('.profile-tag, .post-tag, .tag')) {
     const tagElement = closeBtn.closest('.profile-tag, .post-tag, .tag');
     tagElement.remove(); // Remove tag from DOM
+
+    if (tagElement.classList.contains('tag')) {
+      dispatchSearchChange();
+    }
   }
 });
 
@@ -168,8 +253,40 @@ document.addEventListener('change', function (e) {
     const files = input.files;
     const form = input.closest("form");
     const imageContainer = form.querySelector(".image-container");
+    const existingImageCount = imageContainer.querySelectorAll('.added-image').length;
+    let remainingSlots = Math.max(0, MAX_POST_IMAGE_COUNT - existingImageCount);
+    let overLimitCount = 0;
+    resolvedImageUploadMessage = '';
+    setImageUploadError(form, '');
+    let firstErrorMessage = '';
+    let hasVideoFile = false;
+    let hasGifFile = false;
+    let hasUnsupportedImageFile = false;
+    let hasOversizeFile = false;
+
+    if (files.length > remainingSlots) {
+      resolvedImageUploadMessage = `Можна додати не більше ${MAX_POST_IMAGE_COUNT} фото до одного допису.`;
+      setImageUploadError(form, resolvedImageUploadMessage);
+      input.value = "";
+      return;
+    }
 
     Array.from(files).forEach(file => {
+      const validationMessage = getImageUploadErrorMessage(file);
+      if (validationMessage) {
+        hasVideoFile ||= Boolean(file.type?.startsWith('video/'));
+        hasGifFile ||= file.type === 'image/gif';
+        hasUnsupportedImageFile ||= Boolean(
+          file.type &&
+          !file.type.startsWith('video/') &&
+          file.type !== 'image/gif' &&
+          !ALLOWED_IMAGE_TYPES.has(file.type)
+        );
+        hasOversizeFile ||= file.size > MAX_IMAGE_SIZE_BYTES;
+        firstErrorMessage ||= validationMessage;
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = function (e) {
         const imgSrc = e.target.result;
@@ -187,13 +304,30 @@ document.addEventListener('change', function (e) {
 
         imageWrapper.addEventListener('click', () => {
           imageWrapper.remove();
+          resolvedImageUploadMessage = '';
+          setImageUploadError(form, '');
         });
 
         imageContainer.appendChild(imageWrapper);
       };
 
       reader.readAsDataURL(file);
+      remainingSlots -= 1;
     });
+
+    resolvedImageUploadMessage = firstErrorMessage || '';
+
+    resolvedImageUploadMessage = hasVideoFile
+      ? 'Можна додавати лише фото. Відео для дописів не підтримуються.'
+      : hasGifFile
+        ? 'Гіфки для дописів не підтримуються. Додайте фото у форматі JPG, JPEG, PNG, WEBP або BMP.'
+        : hasUnsupportedImageFile
+          ? 'Можна додавати лише фото у форматі JPG, JPEG, PNG, WEBP або BMP.'
+          : hasOversizeFile
+            ? 'Розмір одного фото не може перевищувати 8 МБ.'
+            : resolvedImageUploadMessage;
+
+    setImageUploadError(form, resolvedImageUploadMessage);
 
     // Reset input so same image can be selected again
     input.value = "";
@@ -284,6 +418,7 @@ function addSearchTagFromInput(input) {
   if (!tagsContainer) return;
 
   addTagToContainer(input, tagsContainer, createSearchTagElement);
+  dispatchSearchChange();
 }
 
 document.addEventListener('click', (e) => {
@@ -338,3 +473,4 @@ function validatePassword() {
 syncGuestUiState();
 document.addEventListener('auth:changed', syncGuestUiState);
 document.addEventListener('page:loaded', syncGuestUiState);
+document.addEventListener('page:loaded', dispatchSearchChange);

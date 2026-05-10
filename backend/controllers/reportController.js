@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { readSessionPayload } = require('../session');
+const { normalizeImageList } = require('../utils/imageValidation');
 
 const REPORT_TITLES = {
   author: 'Звіт про отримання допомоги',
@@ -7,13 +8,7 @@ const REPORT_TITLES = {
 };
 
 function normalizeImages(images) {
-  if (!Array.isArray(images)) {
-    return [];
-  }
-
-  return images
-    .map((image) => String(image || '').trim())
-    .filter(Boolean);
+  return normalizeImageList(images);
 }
 
 async function getCurrentUser(req) {
