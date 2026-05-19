@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "setup:local": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-local.ps1",
     "start": "node backend/index.js",
     "dev": "nodemon backend/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,7 +14,9 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
     "express": "^5.1.0",
+    "nodemailer": "^8.0.7",
     "pg": "^8.16.3"
   }
 }

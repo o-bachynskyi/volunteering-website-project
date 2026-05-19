@@ -1,5 +1,15 @@
 const bcrypt = require('bcrypt');
 const pool = require('../db');
+const { normalizeSingleImage } = require('../utils/imageValidation');
+const PROFILE_ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
+  'image/png',
+  'image/x-png',
+  'image/webp',
+  'image/bmp',
+]);
 const {
   clearSessionCookie,
   createSessionToken,
@@ -15,6 +25,22 @@ const ROLE_CONFIG = {
 const ROLE_BY_ID = Object.fromEntries(
   Object.values(ROLE_CONFIG).map((role) => [role.id, role])
 );
+
+function getDefaultAvatar(roleCode) {
+  return roleCode === 'mi'
+    ? '/public/images/account-icon.png'
+    : '/public/images/premium_photo-1689568126014-06fea9d5d341.jpg';
+}
+
+async function ensureUserTagTableExists(client = pool) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS user_tag (
+      user_rnokpp VARCHAR(32) NOT NULL,
+      tag_id INTEGER NOT NULL,
+      PRIMARY KEY (user_rnokpp, tag_id)
+    )
+  `);
+}
 
 async function ensureRolesExist() {
   await pool.query(
@@ -62,17 +88,79 @@ function normalizeUser(user) {
     role_code: role.code,
     role_name: role.name,
     description: user.user_description || '',
-    image_url: user.user_image_url || '',
+    image_url: user.user_image_url || getDefaultAvatar(role.code),
+    tags: user.tags || [],
   };
 }
 
+function normalizeTags(tags) {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  const seen = new Set();
+  return tags
+    .map((tag) => String(tag || '').trim())
+    .filter(Boolean)
+    .filter((tag) => {
+      const key = tag.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+}
+
+async function getNextId(client, tableName, idColumn) {
+  const result = await client.query(
+    `SELECT COALESCE(MAX(${idColumn}), 0) + 1 AS next_id FROM ${tableName}`
+  );
+  return Number(result.rows[0].next_id);
+}
+
+async function getOrCreateTagId(client, tagName) {
+  const existing = await client.query(
+    `
+      SELECT tag_id
+      FROM tag
+      WHERE LOWER(tag_name) = LOWER($1)
+      LIMIT 1
+    `,
+    [tagName]
+  );
+
+  if (existing.rows[0]) {
+    return existing.rows[0].tag_id;
+  }
+
+  const tagId = await getNextId(client, 'tag', 'tag_id');
+  await client.query(
+    `
+      INSERT INTO tag (tag_id, tag_name)
+      VALUES ($1, $2)
+    `,
+    [tagId, tagName]
+  );
+
+  return tagId;
+}
+
 async function findUserByEmail(email) {
+  await ensureUserTagTableExists();
+
   const result = await pool.query(
     `
-      SELECT u.*, r.role_name
+      SELECT
+        u.*,
+        r.role_name,
+        COALESCE(array_remove(array_agg(DISTINCT t.tag_name), NULL), '{}') AS tags
       FROM app_user u
       LEFT JOIN role r ON r.role_id = u.role_id
+      LEFT JOIN user_tag ut ON ut.user_rnokpp = u.user_rnokpp
+      LEFT JOIN tag t ON t.tag_id = ut.tag_id
       WHERE LOWER(u.user_email) = LOWER($1)
+      GROUP BY u.user_rnokpp, r.role_name
     `,
     [email]
   );
@@ -81,12 +169,20 @@ async function findUserByEmail(email) {
 }
 
 async function findUserByRnokpp(rnokpp) {
+  await ensureUserTagTableExists();
+
   const result = await pool.query(
     `
-      SELECT u.*, r.role_name
+      SELECT
+        u.*,
+        r.role_name,
+        COALESCE(array_remove(array_agg(DISTINCT t.tag_name), NULL), '{}') AS tags
       FROM app_user u
       LEFT JOIN role r ON r.role_id = u.role_id
+      LEFT JOIN user_tag ut ON ut.user_rnokpp = u.user_rnokpp
+      LEFT JOIN tag t ON t.tag_id = ut.tag_id
       WHERE u.user_rnokpp = $1
+      GROUP BY u.user_rnokpp, r.role_name
     `,
     [rnokpp]
   );
@@ -147,6 +243,7 @@ async function registerUser(req, res) {
 
   try {
     await ensureRolesExist();
+    await ensureUserTagTableExists();
 
     const existingByEmail = await findUserByEmail(normalizedEmail);
     if (existingByEmail) {
@@ -181,7 +278,7 @@ async function registerUser(req, res) {
         normalizedEmail,
         passwordHash,
         '',
-        '',
+        getDefaultAvatar(role.code),
       ]
     );
 
@@ -264,6 +361,86 @@ async function getUserProfile(req, res) {
   }
 }
 
+function validateProfilePayload({ full_name }) {
+  if (!full_name?.trim()) {
+    return 'Вкажіть імʼя або назву профілю.';
+  }
+
+  return null;
+}
+
+async function updateUserProfile(req, res) {
+  const { full_name, description, image_url } = req.body;
+  const validationError = validateProfilePayload({ full_name });
+  if (validationError) {
+    return res.status(400).json({ message: validationError });
+  }
+
+  const tags = normalizeTags(req.body.tags);
+  const normalizedImageUrl = normalizeSingleImage(image_url, PROFILE_ALLOWED_IMAGE_TYPES);
+  if (String(image_url || '').trim() && !normalizedImageUrl) {
+    return res.status(400).json({
+      message: 'Для аватара можна використовувати лише фото у форматі JPG, JPEG, PNG, WEBP або BMP.',
+    });
+  }
+  const client = await pool.connect();
+
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      clearSessionCookie(res);
+      return res.status(401).json({ message: 'Потрібно увійти в систему.' });
+    }
+
+    await client.query('BEGIN');
+    await ensureUserTagTableExists(client);
+
+    await client.query(
+      `
+        UPDATE app_user
+        SET
+          user_name = $2,
+          user_description = $3,
+          user_image_url = $4
+        WHERE user_rnokpp = $1
+      `,
+      [
+        user.user_rnokpp,
+        full_name.trim(),
+        String(description || '').trim(),
+        normalizedImageUrl || getDefaultAvatar(user.role_id === 2 ? 'mi' : 'vo'),
+      ]
+    );
+
+    await client.query('DELETE FROM user_tag WHERE user_rnokpp = $1', [user.user_rnokpp]);
+
+    for (const tagName of tags) {
+      const tagId = await getOrCreateTagId(client, tagName);
+      await client.query(
+        `
+          INSERT INTO user_tag (user_rnokpp, tag_id)
+          VALUES ($1, $2)
+        `,
+        [user.user_rnokpp, tagId]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    const updatedUser = await findUserByRnokpp(user.user_rnokpp);
+    return res.status(200).json({
+      message: 'Профіль оновлено.',
+      user: normalizeUser(updatedUser),
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Помилка оновлення профілю:', error);
+    return res.status(500).json({ message: 'Не вдалося оновити профіль.' });
+  } finally {
+    client.release();
+  }
+}
+
 function logoutUser(req, res) {
   clearSessionCookie(res);
   return res.status(200).json({ message: 'Ви вийшли з акаунта.' });
@@ -275,4 +452,5 @@ module.exports = {
   loginUser,
   logoutUser,
   registerUser,
+  updateUserProfile,
 };

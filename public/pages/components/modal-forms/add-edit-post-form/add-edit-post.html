@@ -37,7 +37,9 @@
                 <label for="post-image-upload" class="image-upload-icon" title="Додати фото">
                     <img src="/public/images/image-icon.png" alt="Додати фото">
                 </label>
-                <input type="file" class="image-upload" id="post-image-upload" accept="image/*" multiple hidden>
+                <input type="file" class="image-upload" id="post-image-upload" accept="image/jpeg,image/jpg,image/pjpeg,image/png,image/x-png,image/webp,image/bmp" multiple hidden>
+                <p class="image-upload-hint">Можна додати до 5 фото. Гіфки не підтримуються.</p>
+                <p class="image-upload-error hidden" aria-live="polite"></p>
             </div>
         </div>
         <button type="submit" class="submit-button">Створити</button>
@@ -111,7 +113,9 @@
                 <label for="edit-post-image-upload" class="image-upload-icon" title="Додати фото">
                     <img src="/public/images/image-icon.png" alt="Додати фото">
                 </label>
-                <input type="file" class="image-upload" id="edit-post-image-upload" accept="image/*" multiple hidden>
+                <input type="file" class="image-upload" id="edit-post-image-upload" accept="image/jpeg,image/jpg,image/pjpeg,image/png,image/x-png,image/webp,image/bmp" multiple hidden>
+                <p class="image-upload-hint">Можна додати до 5 фото. Гіфки не підтримуються.</p>
+                <p class="image-upload-error hidden" aria-live="polite"></p>
             </div>
         </div>
         <button type="submit" class="submit-button">Зберегти</button>

@@ -234,6 +234,82 @@
     background-color: #b1b1b1
 }
 
+.button:disabled,
+.submit-button:disabled,
+.report-action-button:disabled,
+.answer-request-button:disabled {
+    cursor: wait;
+    opacity: 0.8;
+}
+
+.button.is-loading,
+.submit-button.is-loading,
+.report-action-button.is-loading,
+.answer-request-button.is-loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.loading-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 160px;
+    width: 100%;
+    padding: 24px 16px;
+    color: #555555;
+}
+
+.loading-text {
+    font-size: 16px;
+    text-align: center;
+}
+
+.search-empty-state {
+    width: 100%;
+    margin: 18px 0;
+    padding: 22px 24px;
+    border-radius: 24px;
+    background-color: #f0f0f0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.search-empty-state-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #3a3a3a;
+    text-align: center;
+}
+
+.loading-spinner,
+.button-spinner {
+    border-radius: 50%;
+    border: 3px solid rgba(28, 28, 28, 0.15);
+    border-top-color: #1c1c1c;
+    animation: spin-loader 0.8s linear infinite;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+}
+
+.button-spinner {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
+}
+
+@keyframes spin-loader {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 #profile-button {
     width: 44px;
     height: 44px;
@@ -622,4 +698,3 @@ main {
         padding: 5px 0 5px 11px;
     }
 }
-

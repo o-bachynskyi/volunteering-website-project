@@ -1,6 +1,14 @@
 const navButtons = document.querySelectorAll('.nav-button a, #open-profile-button');
 const fundraisersMain = document.getElementById('fundraisers-main');
 const dynamicMain = document.getElementById('dynamic-main');
+const PAGE_PATHS = {
+  fundraisers: '/public/pages/index.html',
+  requests: '/public/requests.html',
+  'accepted-requests': '/public/accepted-requests.html',
+  reports: '/public/reports.html',
+  military: '/public/military.html',
+  volunteers: '/public/volunteers.html',
+};
 
 function isUserLoggedIn() {
   return Boolean(window.AuthState?.isLoggedIn());
@@ -10,7 +18,26 @@ function openLoginModal() {
   document.getElementById('login-button')?.click();
 }
 
+function resolvePageFromPath() {
+  const currentPath = window.location.pathname;
+  const matchedPage = Object.entries(PAGE_PATHS).find(([, pagePath]) => pagePath === currentPath);
+  return matchedPage?.[0] || null;
+}
+
+function syncBrowserPath(page) {
+  const nextPath = PAGE_PATHS[page];
+  if (!nextPath || window.location.pathname === nextPath) {
+    return;
+  }
+
+  window.history.replaceState({}, '', nextPath);
+}
+
 async function hydrateProfilePage() {
+  if (!isUserLoggedIn()) {
+    return;
+  }
+
   await window.AuthState?.refresh();
   window.AuthState?.renderUserProfile();
 }
@@ -31,6 +58,7 @@ navButtons.forEach((link) => {
     }
 
     localStorage.setItem('selectedPage', page);
+    syncBrowserPath(page);
 
     document.querySelectorAll('.nav-button').forEach((btn) => {
       btn.classList.remove('active');
@@ -49,6 +77,7 @@ navButtons.forEach((link) => {
     }
 
     try {
+      window.LoadingUi?.showSectionLoader(dynamicMain, 'Завантажуємо сторінку...');
       const res = await fetch(`/public/pages/components/${page}-main/${page}.html`);
       if (!res.ok) {
         throw new Error('Page not found');
@@ -75,7 +104,8 @@ navButtons.forEach((link) => {
 window.addEventListener('DOMContentLoaded', async () => {
   await window.AuthState?.init();
 
-  const savedPage = localStorage.getItem('selectedPage') || 'fundraisers';
+  const pageFromPath = resolvePageFromPath();
+  const savedPage = pageFromPath || localStorage.getItem('selectedPage') || 'fundraisers';
   const protectedPages = new Set(['accepted-requests', 'reports']);
   const initialPage = !isUserLoggedIn() && protectedPages.has(savedPage)
     ? 'fundraisers'
@@ -88,6 +118,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (initialPage === 'user-profile' && !isUserLoggedIn()) {
     localStorage.setItem('selectedPage', 'fundraisers');
+    syncBrowserPath('fundraisers');
     linkToClick = document.querySelector('.nav-button a[data-page="fundraisers"]');
   }
 
@@ -101,12 +132,13 @@ document.addEventListener('auth:changed', async (event) => {
   if (!event.detail.authenticated) {
     if (localStorage.getItem('selectedPage') === 'user-profile') {
       localStorage.setItem('selectedPage', 'fundraisers');
+      syncBrowserPath('fundraisers');
       document.querySelector('.nav-button a[data-page="fundraisers"]')?.click();
     }
     return;
   }
 
   if (document.querySelector('.user-profile')) {
-    await hydrateProfilePage();
+    window.AuthState?.renderUserProfile();
   }
 });
