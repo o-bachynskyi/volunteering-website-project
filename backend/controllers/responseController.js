@@ -9,8 +9,17 @@ function getDefaultAvatar(roleCode) {
     : '/public/images/premium_photo-1689568126014-06fea9d5d341.jpg';
 }
 
+function normalizeScalarId(value) {
+  return String(value ?? '').trim();
+}
+
+function normalizeNumericId(value) {
+  const normalized = Number(normalizeScalarId(value));
+  return Number.isFinite(normalized) ? normalized : null;
+}
+
 function isVolunteer(user) {
-  return Number(user?.role_id) === 1;
+  return normalizeNumericId(user?.role_id) === 1;
 }
 
 async function getCurrentUser(req) {
@@ -34,7 +43,18 @@ async function getCurrentUser(req) {
 
 async function getNextId(client, tableName, idColumn) {
   const result = await client.query(
-    `SELECT COALESCE(MAX(${idColumn}), 0) + 1 AS next_id FROM ${tableName}`
+    `
+      SELECT COALESCE(
+        MAX(
+          NULLIF(
+            regexp_replace(TRIM(CAST(${idColumn} AS text)), '\\D', '', 'g'),
+            ''
+          )::bigint
+        ),
+        0
+      ) + 1 AS next_id
+      FROM ${tableName}
+    `
   );
   return Number(result.rows[0].next_id);
 }
@@ -51,12 +71,13 @@ function normalizeImages(images) {
 }
 
 function formatAcceptedRequest(row, currentUser) {
-  const roleCode = row.author_role_id === 2 ? 'mi' : 'vo';
+  const roleCode = normalizeNumericId(row.author_role_id) === 2 ? 'mi' : 'vo';
 
   return {
-    responseId: String(row.response_id),
-    requestId: String(row.post_id),
+    responseId: normalizeScalarId(row.response_id),
+    requestId: normalizeScalarId(row.post_id),
     responderId: row.user_rnokpp,
+    authorId: normalizeScalarId(row.author_rnokpp),
     title: row.post_title || '',
     description: row.post_description || '',
     tags: row.tags || [],
@@ -99,6 +120,7 @@ async function fetchAcceptedRequests(req, res) {
           p.post_description,
           p.post_status,
           author.user_name AS author_name,
+          author.user_rnokpp AS author_rnokpp,
           author.user_image_url AS author_image_url,
           author.role_id AS author_role_id,
           author_role.role_name AS author_role_name,
@@ -126,6 +148,7 @@ async function fetchAcceptedRequests(req, res) {
           p.post_description,
           p.post_status,
           author.user_name,
+          author.user_rnokpp,
           author.user_image_url,
           author.role_id,
           author_role.role_name
@@ -203,7 +226,7 @@ async function createResponse(req, res) {
       return res.status(403).json({ message: 'Ви не можете відгукнутися на власний запит.' });
     }
 
-    if (post.post_type_id !== 2) {
+    if (normalizeNumericId(post.post_type_id) !== 2) {
       await client.query('ROLLBACK');
       return res.status(400).json({ message: 'Відгук доступний лише для запитів на допомогу.' });
     }

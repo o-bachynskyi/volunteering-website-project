@@ -20,6 +20,16 @@ const POST_TYPE_CONFIG = {
 const POST_TYPE_BY_ID = Object.fromEntries(
   Object.values(POST_TYPE_CONFIG).map((type) => [type.id, type])
 );
+
+function normalizeScalarId(value) {
+  return String(value ?? '').trim();
+}
+
+function normalizeNumericId(value) {
+  const normalized = Number(normalizeScalarId(value));
+  return Number.isFinite(normalized) ? normalized : null;
+}
+
 function getDefaultAvatar(roleCode) {
   return roleCode === 'mi'
     ? '/public/images/account-icon.png'
@@ -27,20 +37,22 @@ function getDefaultAvatar(roleCode) {
 }
 
 function getRoleCode(user) {
-  return Number(user?.role_id) === 2 ? 'mi' : 'vo';
+  return normalizeNumericId(user?.role_id) === 2 ? 'mi' : 'vo';
 }
 
 function formatPost(row) {
-  const type = POST_TYPE_BY_ID[row.post_type_id] || {
-    id: row.post_type_id,
+  const postTypeId = normalizeNumericId(row.post_type_id);
+  const roleId = normalizeNumericId(row.role_id);
+  const type = POST_TYPE_BY_ID[postTypeId] || {
+    id: normalizeScalarId(row.post_type_id),
     code: 'fundraising',
     name: row.post_type_name || 'Допис',
   };
 
-  const roleCode = row.role_id === 2 ? 'mi' : 'vo';
+  const roleCode = roleId === 2 ? 'mi' : 'vo';
 
   return {
-    postId: String(row.post_id),
+    postId: normalizeScalarId(row.post_id),
     authorId: row.user_rnokpp,
     authorName: row.user_name || 'Користувач',
     authorRole: row.role_name || (roleCode === 'mi' ? 'Військовий' : 'Волонтер'),
@@ -172,7 +184,18 @@ async function getCurrentUser(req) {
 
 async function getNextId(client, tableName, idColumn) {
   const result = await client.query(
-    `SELECT COALESCE(MAX(${idColumn}), 0) + 1 AS next_id FROM ${tableName}`
+    `
+      SELECT COALESCE(
+        MAX(
+          NULLIF(
+            regexp_replace(TRIM(CAST(${idColumn} AS text)), '\\D', '', 'g'),
+            ''
+          )::bigint
+        ),
+        0
+      ) + 1 AS next_id
+      FROM ${tableName}
+    `
   );
   return Number(result.rows[0].next_id);
 }
@@ -460,7 +483,7 @@ async function updatePost(req, res) {
       return res.status(400).json({ message: 'Закритий запит не можна редагувати.' });
     }
 
-    if (existingPost.post_type_id !== postType.id) {
+    if (normalizeNumericId(existingPost.post_type_id) !== postType.id) {
       const responseCountResult = await client.query(
         `
           SELECT COUNT(*)::int AS total

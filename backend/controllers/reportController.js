@@ -7,6 +7,10 @@ const REPORT_TITLES = {
   helper: 'Звіт про надання допомоги',
 };
 
+function normalizeScalarId(value) {
+  return String(value ?? '').trim();
+}
+
 function normalizeImages(images) {
   return normalizeImageList(images);
 }
@@ -32,7 +36,18 @@ async function getCurrentUser(req) {
 
 async function getNextId(client, tableName, idColumn) {
   const result = await client.query(
-    `SELECT COALESCE(MAX(${idColumn}), 0) + 1 AS next_id FROM ${tableName}`
+    `
+      SELECT COALESCE(
+        MAX(
+          NULLIF(
+            regexp_replace(TRIM(CAST(${idColumn} AS text)), '\\D', '', 'g'),
+            ''
+          )::bigint
+        ),
+        0
+      ) + 1 AS next_id
+      FROM ${tableName}
+    `
   );
   return Number(result.rows[0].next_id);
 }
@@ -46,9 +61,9 @@ async function ensureResponseStatusColumn(client = pool) {
 
 function formatReport(row) {
   return {
-    reportId: String(row.report_number),
-    requestId: String(row.post_id),
-    responseId: row.response_id ? String(row.response_id) : '',
+    reportId: normalizeScalarId(row.report_number),
+    requestId: normalizeScalarId(row.post_id),
+    responseId: row.response_id ? normalizeScalarId(row.response_id) : '',
     reporterRole: row.report_type || 'author',
     reporterUserRole: row.user_role_name || (row.report_type === 'author' ? 'Військовий' : 'Волонтер'),
     reportTitle: REPORT_TITLES[row.report_type] || 'Звіт',

@@ -9,7 +9,7 @@ CREATE TABLE "user" (
   "email" varchar(255) UNIQUE NOT NULL,
   "password" varchar(255) NOT NULL,
   "role_id" char(10) NOT NULL,
-  "image_url" varchar(255) DEFAULT null
+  "image_url" text DEFAULT null
 );
 
 CREATE TABLE "tag" (
@@ -35,7 +35,7 @@ CREATE TABLE "post" (
   "user_id" uuid NOT NULL,
   "title" varchar(100) NOT NULL,
   "description" varchar(255) NOT NULL,
-  "image_url" varchar(255) DEFAULT null
+  "image_url" text DEFAULT null
 );
 
 CREATE TABLE "post_type" (
@@ -49,7 +49,7 @@ CREATE TABLE "assignment" (
   "post_id" uuid UNIQUE NOT NULL,
   "title" varchar(100) NOT NULL,
   "description" varchar(255) NOT NULL,
-  "image_url" varchar(255) DEFAULT null
+  "image_url" text DEFAULT null
 );
 
 ALTER TABLE "user" ADD FOREIGN KEY ("role_id") REFERENCES "role" ("role_id");

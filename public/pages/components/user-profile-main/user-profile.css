@@ -206,6 +206,114 @@
     margin: 0;
 }
 
+.post-author-trigger,
+.post-author-name {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    padding: 0;
+    cursor: pointer;
+}
+
+.post-author-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    border-radius: 50%;
+}
+
+.post-author-trigger .post-profile-pic {
+    margin-right: 0;
+}
+
+.post-author-trigger:hover .post-profile-pic {
+    box-shadow: 0 0 0 4px #d9d9d9;
+}
+
+.post-author-name:hover {
+    text-decoration: underline;
+}
+
+.public-profile-overlay {
+    z-index: 129;
+}
+
+.public-profile-modal-window {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(760px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding: 30px;
+    border-radius: 24px;
+    background-color: #f0f0f0;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+    z-index: 130;
+}
+
+.public-profile-card {
+    color: #1c1c1c;
+}
+
+.public-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-right: 44px;
+}
+
+.public-profile-image {
+    width: 160px;
+    height: 160px;
+    border-radius: 20px;
+    object-fit: cover;
+}
+
+.public-profile-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.public-profile-name {
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.public-profile-role {
+    font-size: 18px;
+    font-weight: 600;
+    color: #5f5f5f;
+}
+
+.public-profile-tags {
+    margin-top: 6px;
+}
+
+.public-profile-divider {
+    margin-top: 18px;
+}
+
+.public-profile-description,
+.public-profile-empty,
+.public-profile-loading {
+    font-size: 18px;
+    line-height: 1.55;
+}
+
+.public-profile-empty,
+.public-profile-loading {
+    text-align: center;
+    padding: 24px;
+    color: #5f5f5f;
+}
+
 @media (max-width:600px) {
     .profile-header {
         flex-direction: column;
@@ -225,5 +333,17 @@
     .edit-profile-button {
         width: 100%;
         position: static;
+    }
+
+    .public-profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding-right: 0;
+    }
+
+    .public-profile-image {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
     }
 }

@@ -16,6 +16,15 @@ function getDefaultAvatar(roleCode) {
     : '/public/images/premium_photo-1689568126014-06fea9d5d341.jpg';
 }
 
+function normalizeScalarId(value) {
+  return String(value ?? '').trim();
+}
+
+function normalizeNumericId(value) {
+  const normalized = Number(normalizeScalarId(value));
+  return Number.isFinite(normalized) ? normalized : null;
+}
+
 function resolveRoleFilter(role) {
   const normalized = String(role || '').trim().toLowerCase();
   if (normalized === 'military') return 2;
@@ -26,12 +35,12 @@ function resolveRoleFilter(role) {
 }
 
 function formatUser(row) {
-  const roleCode = row.role_id === 2 ? 'mi' : 'vo';
+  const roleCode = normalizeNumericId(row.role_id) === 2 ? 'mi' : 'vo';
 
   return {
-    rnokpp: row.user_rnokpp,
+    rnokpp: normalizeScalarId(row.user_rnokpp),
     full_name: row.user_name || 'Користувач',
-    role_id: row.role_id,
+    role_id: normalizeNumericId(row.role_id) || row.role_id,
     role_name: row.role_name || (roleCode === 'mi' ? 'Військовий' : 'Волонтер'),
     role_code: roleCode,
     description: row.user_description || '',
@@ -89,6 +98,54 @@ async function fetchUsers(req, res) {
   }
 }
 
+async function fetchUserByRnokpp(req, res) {
+  try {
+    await ensureUserTagTableExists();
+
+    const rnokpp = normalizeScalarId(req.params.rnokpp);
+    if (!rnokpp) {
+      return res.status(400).json({ message: 'Некоректний ідентифікатор користувача.' });
+    }
+
+    const result = await pool.query(
+      `
+        SELECT
+          u.user_rnokpp,
+          u.user_name,
+          u.user_description,
+          u.user_image_url,
+          u.role_id,
+          r.role_name,
+          COALESCE(array_remove(array_agg(DISTINCT t.tag_name), NULL), '{}') AS tags
+        FROM app_user u
+        LEFT JOIN role r ON r.role_id = u.role_id
+        LEFT JOIN user_tag ut ON ut.user_rnokpp = u.user_rnokpp
+        LEFT JOIN tag t ON t.tag_id = ut.tag_id
+        WHERE u.user_rnokpp = $1
+        GROUP BY
+          u.user_rnokpp,
+          u.user_name,
+          u.user_description,
+          u.user_image_url,
+          u.role_id,
+          r.role_name
+        LIMIT 1
+      `,
+      [rnokpp]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ message: 'Користувача не знайдено.' });
+    }
+
+    return res.status(200).json({ user: formatUser(result.rows[0]) });
+  } catch (error) {
+    console.error('Помилка завантаження профілю користувача:', error);
+    return res.status(500).json({ message: 'Не вдалося завантажити профіль користувача.' });
+  }
+}
+
 module.exports = {
   fetchUsers,
+  fetchUserByRnokpp,
 };

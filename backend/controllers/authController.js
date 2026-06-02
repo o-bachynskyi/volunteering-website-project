@@ -73,8 +73,9 @@ function resolveRole(roleId) {
 }
 
 function normalizeUser(user) {
-  const role = ROLE_BY_ID[user.role_id] || {
-    id: user.role_id,
+  const normalizedRoleId = Number(String(user.role_id ?? '').trim());
+  const role = ROLE_BY_ID[normalizedRoleId] || {
+    id: normalizedRoleId || user.role_id,
     code: null,
     name: user.role_name || 'Невідома роль',
   };
@@ -114,7 +115,18 @@ function normalizeTags(tags) {
 
 async function getNextId(client, tableName, idColumn) {
   const result = await client.query(
-    `SELECT COALESCE(MAX(${idColumn}), 0) + 1 AS next_id FROM ${tableName}`
+    `
+      SELECT COALESCE(
+        MAX(
+          NULLIF(
+            regexp_replace(TRIM(CAST(${idColumn} AS text)), '\\D', '', 'g'),
+            ''
+          )::bigint
+        ),
+        0
+      ) + 1 AS next_id
+      FROM ${tableName}
+    `
   );
   return Number(result.rows[0].next_id);
 }

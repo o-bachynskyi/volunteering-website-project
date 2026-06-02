@@ -33,8 +33,41 @@
     return window.AuthState?.getUser()?.role_code || null;
   }
 
+  function getCurrentUserRoleName() {
+    return String(window.AuthState?.getUser()?.role_name || '').trim().toLowerCase();
+  }
+
+  function isCurrentUserMilitary() {
+    return getCurrentUserRoleCode() === 'mi' || getCurrentUserRoleName() === 'військовий';
+  }
+
+  function isCurrentUserVolunteer() {
+    return getCurrentUserRoleCode() === 'vo' || getCurrentUserRoleName() === 'волонтер';
+  }
+
+  function normalizeId(value) {
+    return String(value ?? '').trim();
+  }
+
+  function resolvePostTypePayload(select) {
+    const selectedOption = select?.selectedOptions?.[0] || null;
+    const selectedValue = String(selectedOption?.value || select?.value || '').trim().toLowerCase();
+    const selectedLabel = String(selectedOption?.textContent || '').trim().toLowerCase();
+    const isMilitary = isCurrentUserMilitary();
+
+    if (!isMilitary) {
+      return 'fundraising';
+    }
+
+    if (selectedValue === 'request' || selectedLabel.includes('запит')) {
+      return 'request';
+    }
+
+    return 'fundraising';
+  }
+
   function canCurrentUserRespondToRequests() {
-    return !isLoggedIn() || getCurrentUserRoleCode() === 'vo';
+    return !isLoggedIn() || isCurrentUserVolunteer();
   }
 
   function isLoggedIn() {
@@ -55,6 +88,19 @@
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
+  }
+
+  function formatReportRequestDate(value) {
+    if (!value) {
+      return 'Невідомо';
+    }
+
+    const parsed = new Date(value).getTime();
+    if (Number.isFinite(parsed)) {
+      return formatDateTime(parsed);
+    }
+
+    return String(value);
   }
 
   function getSortableTimestamp(entry) {
@@ -130,6 +176,22 @@
     return `${days} ${pluralizeUkrainian(days, ['день', 'дні', 'днів'])} тому`;
   }
 
+  function formatCardDateValue(value, fallbackTimestamp) {
+    const directTimestamp = Number(value);
+    if (Number.isFinite(directTimestamp) && directTimestamp > 0) {
+      return formatDateTextForCard(directTimestamp);
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = new Date(value).getTime();
+      if (Number.isFinite(parsed)) {
+        return formatDateTextForCard(parsed);
+      }
+    }
+
+    return formatDateTextForCard(fallbackTimestamp);
+  }
+
   function buildTags(tags = []) {
     if (!tags.length) return '';
 
@@ -144,6 +206,22 @@
     return images.map((imageUrl) => `
       <img src="${escapeHtml(imageUrl)}" alt="post photo" class="photo">
     `).join('');
+  }
+
+  function buildAuthorAvatar(userId, avatar, name) {
+    return `
+      <button type="button" class="post-author-trigger user-profile-open" data-user-id="${escapeHtml(userId || '')}" aria-label="Відкрити профіль ${escapeHtml(name || 'користувача')}">
+        <img src="${escapeHtml(avatar)}" alt="User Profile Picture" class="post-profile-pic">
+      </button>
+    `;
+  }
+
+  function buildAuthorName(userId, name) {
+    return `
+      <button type="button" class="post-author-name user-profile-open" data-user-id="${escapeHtml(userId || '')}">
+        ${escapeHtml(name || 'Користувач')}
+      </button>
+    `;
   }
 
   function renderDataLoadingState() {
@@ -349,12 +427,12 @@
       <article class="post request-post-card" data-request-id="${escapeHtml(request.requestId)}" data-response-id="${escapeHtml(request.responseId || '')}" data-request-status="${escapeHtml(request.status)}" data-request-context="helper">
         <header class="post-header request-post-header">
           <div class="request-post-header-left">
-            <img src="${escapeHtml(request.avatar)}" alt="User Profile Picture" class="post-profile-pic">
+            ${buildAuthorAvatar(request.authorId, request.avatar, request.authorName)}
             <div class="post-data">
               <div class="user-info">
-                <p class="name">${escapeHtml(request.authorName)}</p>
+                <p class="name">${buildAuthorName(request.authorId, request.authorName)}</p>
                 <p class="dot">•</p>
-                <time class="post-date">${escapeHtml(request.acceptedDateText || formatDateTextForCard(request.createdAt))}</time>
+                <time class="post-date">${escapeHtml(formatCardDateValue(request.acceptedDateText || request.acceptedAt, request.createdAt))}</time>
               </div>
               <p class="user-role">${escapeHtml(request.authorRole)}</p>
               <p class="request-status ${isClosed ? 'is-closed' : 'is-open'}">${isClosed ? 'Закритий' : 'Відкритий'}</p>
@@ -398,10 +476,10 @@
       <article class="post request-post-card" data-request-id="${escapeHtml(request.postId)}" data-request-status="${escapeHtml(request.status)}" data-request-context="request-feed">
         <header class="request-post-header">
           <div class="request-post-header-left">
-            <img src="${escapeHtml(request.avatar)}" alt="User Profile Picture" class="post-profile-pic">
+            ${buildAuthorAvatar(request.authorId, request.avatar, request.authorName)}
             <div class="post-data">
               <div class="user-info">
-                <p class="name">${escapeHtml(request.authorName || 'Користувач')}</p>
+                <p class="name">${buildAuthorName(request.authorId, request.authorName)}</p>
                 <p class="dot">•</p>
                 <time class="post-date">${escapeHtml(request.dateText)}</time>
               </div>
@@ -429,7 +507,7 @@
 
     const isClosed = request.status === 'closed';
     const canDeletePost = !request.hasLinkedActivity;
-    const editAction = isClosed ? '' : `
+    const editAction = `
       <button class="post-dropdown-item edit-post-button">
         <img src="/public/images/edit-icon.png" alt="edit post">
         Редагувати
@@ -446,10 +524,10 @@
       <article class="post request-post-card" data-request-id="${escapeHtml(request.postId)}" data-owned-post-id="${escapeHtml(request.postId)}" data-request-status="${escapeHtml(request.status)}" data-request-context="author-feed">
         <header class="request-post-header has-owner-actions">
           <div class="request-post-header-left">
-            <img src="${escapeHtml(request.avatar)}" alt="User Profile Picture" class="post-profile-pic">
+            ${buildAuthorAvatar(request.authorId, request.avatar, request.authorName)}
             <div class="post-data">
               <div class="user-info">
-                <p class="name">${escapeHtml(request.authorName || 'Користувач')}</p>
+                <p class="name">${buildAuthorName(request.authorId, request.authorName)}</p>
                 <p class="dot">•</p>
                 <time class="post-date">${escapeHtml(request.dateText)}</time>
               </div>
@@ -488,6 +566,12 @@
     const isClosed = post.status === 'closed';
     const canDeletePost = !post.hasLinkedActivity;
     const requestStatus = isRequest ? `<p class="request-status ${isClosed ? 'is-closed' : 'is-open'}">${isClosed ? 'Закритий' : 'Відкритий'}</p>` : '';
+    const editAction = `
+      <button class="post-dropdown-item edit-post-button">
+        <img src="/public/images/edit-icon.png" alt="edit post">
+        Редагувати
+      </button>
+    `;
     const requestActions = isRequest && !isClosed ? `
       <button class="post-dropdown-item close-request-button" data-report-role="author">
         <img src="/public/images/close-modal-icon.png" alt="close request">
@@ -498,10 +582,10 @@
     return `
       <article class="post ${isRequest ? 'request-post-card' : ''}" data-owned-post-id="${escapeHtml(post.postId)}" ${isRequest ? `data-request-id="${escapeHtml(post.postId)}" data-request-status="${escapeHtml(post.status)}" data-request-context="author"` : ''}>
         <header class="post-header">
-          <img src="${escapeHtml(post.avatar)}" alt="User Profile Picture" class="post-profile-pic">
+          ${buildAuthorAvatar(post.authorId, post.avatar, post.authorName)}
           <div class="post-data">
             <div class="user-info">
-              <p class="name">${escapeHtml(post.authorName || 'Користувач')}</p>
+              <p class="name">${buildAuthorName(post.authorId, post.authorName)}</p>
               <p class="dot">•</p>
               <time class="post-date">${escapeHtml(post.dateText)}</time>
             </div>
@@ -511,12 +595,7 @@
               <img src="/public/images/more-icon.png" alt="more">
             </button>
             <div class="post-more-dropdown hidden">
-              ${isRequest && isClosed ? '' : `
-                <button class="post-dropdown-item edit-post-button">
-                  <img src="/public/images/edit-icon.png" alt="edit post">
-                  Редагувати
-                </button>
-              `}
+              ${editAction}
               ${requestActions}
               ${canDeletePost ? `
                 <button class="post-dropdown-item delete-own-post-button">
@@ -560,10 +639,10 @@
     return `
       <article class="post" data-owned-post-id="${escapeHtml(post.isOwnPost ? post.postId : '')}">
         <header class="post-header">
-          <img src="${escapeHtml(post.avatar)}" alt="User Profile Picture" class="post-profile-pic">
+          ${buildAuthorAvatar(post.authorId, post.avatar, post.authorName)}
           <div class="post-data">
             <div class="user-info">
-              <p class="name">${escapeHtml(post.authorName || 'Користувач')}</p>
+              <p class="name">${buildAuthorName(post.authorId, post.authorName)}</p>
               <p class="dot">•</p>
               <time class="post-date">${escapeHtml(post.dateText)}</time>
             </div>
@@ -583,9 +662,6 @@
 
   function buildReportCard(report) {
     const requestTitle = report.requestSnapshot?.title || 'Без назви';
-    const requestStatus = report.reporterRole === 'author'
-      ? 'Запит закрито автором'
-      : 'Відгук закрито волонтером';
 
     return `
       <article class="report-record-card">
@@ -594,7 +670,6 @@
             <p class="report-record-type">${escapeHtml(report.reportTitle)}</p>
             <h3 class="report-record-title">${escapeHtml(requestTitle)}</h3>
             <p class="report-record-meta">Створено: ${escapeHtml(formatDateTime(report.createdAt))}</p>
-            <p class="report-record-meta">${escapeHtml(requestStatus)}</p>
           </div>
           <div class="report-record-actions">
             <button type="button" class="report-action-button view-report-button" data-report-id="${escapeHtml(report.reportId)}">
@@ -940,7 +1015,7 @@
           <div class="report-document-request">
             <p class="report-document-request-title">${escapeHtml(request.title || 'Без назви')}</p>
             <p class="report-document-request-meta">Автор: ${escapeHtml(request.authorName || 'Невідомо')} (${escapeHtml(request.authorRole || 'Невідомо')})</p>
-            <p class="report-document-request-meta">Дата запиту: ${escapeHtml(request.dateText || 'Невідомо')}</p>
+            <p class="report-document-request-meta">Дата запиту: ${escapeHtml(formatReportRequestDate(request.dateText))}</p>
             <div class="report-document-tags">${tagsMarkup}</div>
             <p class="report-document-text">${escapeHtml(request.description || 'Опис запиту відсутній.')}</p>
             <div class="report-document-subsection">
@@ -966,34 +1041,49 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(report.reportTitle)}</title>
+  <link rel="stylesheet" href="/public/styles/styles.css">
+  <link rel="stylesheet" href="/public/pages/components/user-profile-main/user-profile.css">
+  <link rel="stylesheet" href="/public/pages/components/reports-main/reports.css">
   <style>
-    body { margin: 0; padding: 32px; font-family: Arial, sans-serif; color: #1c1c1c; background: #ffffff; }
-    .report-document-sheet { max-width: 900px; margin: 0 auto; border: 1px solid #d6d6d6; border-radius: 18px; padding: 28px; }
-    .report-document-kicker { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #666666; }
-    .report-document-title { margin: 0 0 20px; font-size: 30px; }
-    .report-document-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px; }
-    .report-document-meta-label { margin: 0 0 4px; font-size: 12px; color: #666666; text-transform: uppercase; letter-spacing: 0.08em; }
-    .report-document-meta-value, .report-document-request-title, .report-document-request-meta, .report-document-text { margin: 0; }
-    .report-document-section { margin-top: 24px; }
-    .report-document-section h3 { margin: 0 0 12px; font-size: 20px; }
-    .report-document-request { padding: 18px; background: #f6f6f6; border-radius: 14px; }
-    .report-document-request-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    .report-document-request-meta { margin-bottom: 6px; color: #4f4f4f; }
-    .report-document-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-    .report-document-tag { display: inline-flex; align-items: center; padding: 6px 12px; background: #d9d9d9; border-radius: 999px; font-size: 13px; }
-    .report-document-tag.muted { color: #666666; }
-    .report-document-text { white-space: pre-wrap; line-height: 1.6; word-break: break-word; }
-    .report-document-subsection { margin-top: 16px; }
-    .report-document-subsection h4 { margin: 0 0 10px; font-size: 16px; }
-    .report-document-images { display: flex; flex-wrap: wrap; gap: 12px; }
-    .report-document-image { display: flex; align-items: center; justify-content: center; margin: 0; overflow: hidden; border-radius: 14px; border: 1px solid #d8d8d8; width: 243px; height: 243px; flex: 0 0 243px; background: #f3f3f3; padding: 10px; }
-    .report-document-image img { width: 100%; height: 100%; object-fit: contain; display: block; }
-    .report-document-empty { color: #666666; }
+    body {
+      min-height: 100vh;
+      padding: 32px;
+      background: #f0f0f0;
+    }
+
+    .export-report-shell {
+      width: min(920px, 100%);
+      margin: 0 auto;
+    }
+
+    .report-document-sheet {
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+
+      .export-report-shell {
+        width: 100%;
+        margin: 0;
+      }
+
+      .report-document-sheet {
+        box-shadow: none;
+        border-radius: 0;
+      }
+    }
   </style>
 </head>
 <body>
-  ${buildReportMarkup(report)}
+  <main class="export-report-shell report-preview-document">
+    ${buildReportMarkup(report)}
+  </main>
   <script>window.addEventListener('load', function () { window.print(); });</script>
 </body>
 </html>`;
@@ -1251,8 +1341,9 @@
       if (!card) return;
 
       const postId = card.dataset.ownedPostId || card.dataset.requestId;
-      if (/^\d+$/.test(String(postId))) {
-        fetch(`/posts/${postId}`, {
+      const normalizedPostId = normalizeId(postId);
+      if (/^\d+$/.test(normalizedPostId)) {
+        fetch(`/posts/${normalizedPostId}`, {
           method: 'DELETE',
           credentials: 'same-origin',
         })
@@ -1271,7 +1362,7 @@
         return;
       }
 
-      runtimeState.deletedOwnedPosts[postId] = true;
+      runtimeState.deletedOwnedPosts[normalizedPostId] = true;
       void syncRequestUI();
     }
 
@@ -1305,12 +1396,13 @@
       const previewImages = readImagesFromForm(addPostForm);
 
       try {
+        const selectedType = resolvePostTypePayload(typeSelect);
         const response = await fetch('/posts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({
-            type: typeSelect?.value || 'fundraising',
+            type: selectedType,
             title: titleInput?.value.trim() || '',
             description: descriptionInput?.value.trim() || '',
             tags: tagTitles,
@@ -1353,7 +1445,7 @@
       if (!postId) return;
 
       const payload = {
-        type: editPostForm.querySelector('select[name="type"]')?.value || 'fundraising',
+        type: resolvePostTypePayload(editPostForm.querySelector('select[name="type"]')),
         title: editPostForm.querySelector('input[name="post-title"]')?.value.trim() || '',
         description: editPostForm.querySelector('textarea[name="post-text"]')?.value.trim() || '',
         tags: readTagsFromContainer(editPostForm.querySelector('#user-post-tags')),
@@ -1505,4 +1597,3 @@
     }
   });
 })();
-

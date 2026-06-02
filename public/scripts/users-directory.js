@@ -24,17 +24,18 @@
 
   function buildUserCard(user) {
     return `
-      <a href="#" class="user-card-link">
+      <a href="#" class="user-card-link user-profile-open" data-user-id="${escapeHtml(user.rnokpp)}">
         <article class="user-card">
           <div class="card-content">
             <img src="${escapeHtml(user.image_url)}" alt="User Profile Picture" class="profile-pic">
             <div class="card-data">
               <div class="user-data">
                 <p class="user-name">${escapeHtml(user.full_name)}</p>
+                <p class="user-role">${escapeHtml(user.role_name || '')}</p>
               </div>
+              ${user.tags?.length ? `<div class="user-tags">${buildTags(user.tags)}</div>` : ''}
             </div>
           </div>
-          <div class="user-tags">${buildTags(user.tags || [])}</div>
         </article>
       </a>
     `;

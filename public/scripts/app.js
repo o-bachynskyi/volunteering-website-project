@@ -389,11 +389,34 @@ function createSearchTagElement(tagValue) {
   return tagEl;
 }
 
+function createProfileTagElement(tagValue) {
+  const tagEl = document.createElement('div');
+  tagEl.classList.add('profile-tag');
+
+  const tagTitle = document.createElement('p');
+  tagTitle.classList.add('profile-tag-title');
+  tagTitle.textContent = tagValue;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.classList.add('close');
+
+  const closeIcon = document.createElement('img');
+  closeIcon.src = '/public/images/close-icon.png';
+  closeIcon.alt = 'Видалити тег';
+
+  closeBtn.appendChild(closeIcon);
+  tagEl.appendChild(tagTitle);
+  tagEl.appendChild(closeBtn);
+
+  return tagEl;
+}
+
 function addTagToContainer(input, tagsContainer, createTagElement) {
   const tagValue = input.value.trim();
   if (!tagValue) return;
 
-  const exists = Array.from(tagsContainer.querySelectorAll('.post-tag-title, .tag-title'))
+  const exists = Array.from(tagsContainer.querySelectorAll('.post-tag-title, .profile-tag-title, .tag-title'))
     .some(tag => tag.textContent.trim().toLowerCase() === tagValue.toLowerCase());
 
   if (exists) {
@@ -421,12 +444,30 @@ function addSearchTagFromInput(input) {
   dispatchSearchChange();
 }
 
+function addProfileTagFromInput(input) {
+  const form = input.closest('form');
+  const tagsContainer = form?.querySelector('#user-profile-tags');
+  if (!form || !tagsContainer) return;
+
+  addTagToContainer(input, tagsContainer, createProfileTagElement);
+}
+
 document.addEventListener('click', (e) => {
   const addTagButton = e.target.closest('.add-tag-button');
   if (addTagButton) {
     const input = addTagButton.closest('.post-tags-entry-row')?.querySelector('input[name="post-tags"]');
     if (input) {
       addPostTagFromInput(input);
+      input.focus();
+    }
+    return;
+  }
+
+  const addProfileTagButton = e.target.closest('.add-profile-tag-button');
+  if (addProfileTagButton) {
+    const input = addProfileTagButton.closest('.profile-tags-entry-row')?.querySelector('#profile-tags');
+    if (input) {
+      addProfileTagFromInput(input);
       input.focus();
     }
     return;
@@ -456,6 +497,13 @@ document.addEventListener('keydown', (e) => {
   if (searchTagInput) {
     e.preventDefault();
     addSearchTagFromInput(searchTagInput);
+    return;
+  }
+
+  const profileTagInput = e.target.closest('#profile-tags');
+  if (profileTagInput) {
+    e.preventDefault();
+    addProfileTagFromInput(profileTagInput);
   }
 });
 

@@ -24,7 +24,12 @@
         </div>
         <div class="profile-text-input">
             <label for="profile-tags" class="input-title">Теги</label>
-            <input type="search" id="profile-tags" name="profile-tags" placeholder="Пошук">
+            <div class="profile-tags-entry-row">
+                <input type="search" id="profile-tags" name="profile-tags" placeholder="Додати тег">
+                <button type="button" class="add-profile-tag-button" aria-label="Додати тег">
+                    <img src="/public/images/add-icon.png" alt="add tag">
+                </button>
+            </div>
             <div class="profile-tags" id="user-profile-tags">
             </div>
         </div>

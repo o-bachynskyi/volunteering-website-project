@@ -240,13 +240,19 @@ function showAddEditPostModal(mode = 'add') {
   document.body.classList.add('modal-open');
 
   const user = window.AuthState?.getUser?.();
-  const isMilitary = user?.role_code === 'mi';
+  const roleCode = user?.role_code;
+  const roleName = (user?.role_name || '').trim().toLowerCase();
+  const isMilitary = roleCode === 'mi' || roleName === 'військовий';
+
   modal.querySelectorAll('select[name="type"]').forEach((select) => {
+    const fundraisingOption = Array.from(select.options).find((option) => option.value === 'fundraising');
     const requestOption = Array.from(select.options).find((option) => option.value === 'request');
-    if (!requestOption) {
+    if (!fundraisingOption || !requestOption) {
       return;
     }
 
+    fundraisingOption.hidden = false;
+    fundraisingOption.disabled = false;
     requestOption.hidden = !isMilitary;
     requestOption.disabled = !isMilitary;
 

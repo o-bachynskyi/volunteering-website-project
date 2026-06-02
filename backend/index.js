@@ -22,6 +22,19 @@ const appPages = new Set([
   'volunteers',
 ]);
 
+async function ensureImageColumnsSupportLongValues() {
+  const statements = [
+    `ALTER TABLE IF EXISTS app_user ALTER COLUMN user_image_url TYPE TEXT`,
+    `ALTER TABLE IF EXISTS post_image ALTER COLUMN post_image_url TYPE TEXT`,
+    `ALTER TABLE IF EXISTS response_image ALTER COLUMN response_image_url TYPE TEXT`,
+    `ALTER TABLE IF EXISTS report_image ALTER COLUMN report_image_url TYPE TEXT`,
+  ];
+
+  for (const statement of statements) {
+    await pool.query(statement);
+  }
+}
+
 app.use(express.json({ limit: '15mb' }));
 app.use('/public', express.static(publicDir));
 app.use('/auth', authRoutes);
@@ -59,6 +72,7 @@ app.get('/public/:page.html', (req, res, next) => {
 app.listen(PORT, async () => {
   try {
     await pool.query('SELECT NOW()');
+    await ensureImageColumnsSupportLongValues();
     console.log(`Server is running at http://localhost:${PORT}`);
   } catch (error) {
     console.error('Не вдалося підключитися до PostgreSQL:', error);
