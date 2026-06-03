@@ -1,6 +1,6 @@
 (function attachAuthState() {
   const defaultAvatar = '/public/images/account-icon.png';
-  const protectedPages = new Set(['accepted-requests', 'reports', 'user-profile']);
+  const protectedPages = new Set(['accepted-requests', 'reports', 'user-profile', 'admin']);
   const state = {
     authenticated: false,
     user: null,

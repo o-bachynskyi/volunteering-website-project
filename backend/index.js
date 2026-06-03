@@ -20,6 +20,7 @@ const appPages = new Set([
   'reports',
   'military',
   'volunteers',
+  'admin',
 ]);
 
 async function ensureImageColumnsSupportLongValues() {

@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { readSessionPayload } = require('../session');
+const { isAdmin } = require('../utils/admin');
 const { normalizeImageList } = require('../utils/imageValidation');
 const MAX_POST_IMAGE_COUNT = 5;
 const POST_ALLOWED_IMAGE_TYPES = new Set([
@@ -631,7 +632,7 @@ async function deletePost(req, res) {
       return res.status(404).json({ message: 'Допис не знайдено.' });
     }
 
-    if (post.user_rnokpp !== currentUser.user_rnokpp) {
+    if (post.user_rnokpp !== currentUser.user_rnokpp && !isAdmin(currentUser)) {
       await client.query('ROLLBACK');
       return res.status(403).json({ message: 'Ви не можете видалити чужий допис.' });
     }

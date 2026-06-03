@@ -8,6 +8,7 @@ const PAGE_PATHS = {
   reports: '/public/reports.html',
   military: '/public/military.html',
   volunteers: '/public/volunteers.html',
+  admin: '/public/admin.html',
 };
 
 function isUserLoggedIn() {
@@ -106,7 +107,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const pageFromPath = resolvePageFromPath();
   const savedPage = pageFromPath || localStorage.getItem('selectedPage') || 'fundraisers';
-  const protectedPages = new Set(['accepted-requests', 'reports']);
+  const protectedPages = new Set(['accepted-requests', 'reports', 'admin']);
   const initialPage = !isUserLoggedIn() && protectedPages.has(savedPage)
     ? 'fundraisers'
     : savedPage;
@@ -130,7 +131,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 document.addEventListener('auth:changed', async (event) => {
   if (!event.detail.authenticated) {
-    if (localStorage.getItem('selectedPage') === 'user-profile') {
+    const protectedPages = new Set(['accepted-requests', 'reports', 'user-profile', 'admin']);
+    if (protectedPages.has(localStorage.getItem('selectedPage'))) {
       localStorage.setItem('selectedPage', 'fundraisers');
       syncBrowserPath('fundraisers');
       document.querySelector('.nav-button a[data-page="fundraisers"]')?.click();

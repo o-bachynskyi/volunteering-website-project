@@ -1,0 +1,376 @@
+.admin-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px;
+}
+
+.admin-panel-header {
+    background: #f6f6f2;
+    border: 1px solid #d8d6ca;
+    border-radius: 28px;
+    padding: 24px;
+}
+
+.admin-panel-eyebrow {
+    margin: 0 0 8px;
+    color: #77725f;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.admin-panel-title,
+.admin-section-title {
+    margin: 0;
+    color: #1f1f18;
+}
+
+.admin-panel-title {
+    font-size: 2rem;
+}
+
+.admin-panel-description,
+.admin-section-description {
+    margin: 8px 0 0;
+    color: #5f5b49;
+    line-height: 1.6;
+}
+
+.admin-feedback {
+    border-radius: 18px;
+    padding: 14px 18px;
+    font-weight: 600;
+}
+
+.admin-feedback.is-success {
+    background: #e4f7e8;
+    color: #1f6b2e;
+}
+
+.admin-feedback.is-error {
+    background: #ffe6e6;
+    color: #8f2e2e;
+}
+
+.admin-summary {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.admin-summary-card,
+.admin-user-card,
+.admin-post-card {
+    background: #ffffff;
+    border: 1px solid #d8d6ca;
+    border-radius: 24px;
+    box-shadow: 0 12px 28px rgba(31, 31, 24, 0.05);
+}
+
+.admin-summary-card {
+    padding: 20px;
+}
+
+.admin-summary-label {
+    margin: 0;
+    color: #77725f;
+    font-size: 0.9375rem;
+}
+
+.admin-summary-value {
+    margin: 10px 0 0;
+    color: #1f1f18;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.admin-summary-note {
+    margin: 8px 0 0;
+    color: #77725f;
+    font-size: 0.875rem;
+}
+
+.admin-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.admin-section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.admin-refresh-button {
+    min-width: 180px;
+}
+
+.admin-filters {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    align-items: end;
+}
+
+.admin-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-filter-label {
+    color: #5f5b49;
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
+.admin-filter-input {
+    min-height: 46px;
+    border: 1px solid #d8d6ca;
+    border-radius: 14px;
+    background: #ffffff;
+    color: #1f1f18;
+    font: inherit;
+    padding: 12px 14px;
+}
+
+.admin-filter-input:focus {
+    border-color: #9bb29e;
+    box-shadow: 0 0 0 3px rgba(164, 255, 177, 0.22);
+    outline: none;
+}
+
+.admin-filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    color: #3c392d;
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.admin-filter-checkbox input {
+    width: 18px;
+    height: 18px;
+    accent-color: #2f7f41;
+}
+
+.admin-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.admin-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.admin-user-card,
+.admin-post-card {
+    padding: 20px;
+}
+
+.admin-user-card-header,
+.admin-post-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.admin-user-meta,
+.admin-post-meta {
+    min-width: 0;
+}
+
+.admin-user-name,
+.admin-post-title {
+    margin: 0;
+    color: #1f1f18;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.admin-user-email,
+.admin-post-author,
+.admin-post-description,
+.admin-empty-text {
+    margin: 8px 0 0;
+    color: #5f5b49;
+}
+
+.admin-user-role,
+.admin-post-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: #f0efe8;
+    color: #4d493b;
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin-top: 10px;
+    padding: 6px 12px;
+}
+
+.admin-post-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.admin-post-badge.is-request {
+    background: #e6f5ea;
+    color: #1f6b2e;
+}
+
+.admin-post-badge.is-fundraising {
+    background: #fff3dd;
+    color: #8a6115;
+}
+
+.admin-post-badge.is-closed {
+    background: #ececec;
+    color: #595959;
+}
+
+.admin-post-badge.is-open {
+    background: #e2f7e6;
+    color: #1d7030;
+}
+
+.admin-post-badge.is-locked {
+    background: #ffe7e7;
+    color: #8d2e2e;
+}
+
+.admin-post-badge.is-removable {
+    background: #e7f1ff;
+    color: #1f558a;
+}
+
+.admin-card-stats {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 16px;
+}
+
+.admin-stat {
+    border-radius: 18px;
+    background: #f8f7f2;
+    padding: 12px;
+}
+
+.admin-stat-label {
+    margin: 0;
+    color: #77725f;
+    font-size: 0.8125rem;
+}
+
+.admin-stat-value {
+    margin: 8px 0 0;
+    color: #1f1f18;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.admin-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.admin-tag {
+    border-radius: 999px;
+    background: #f0efe8;
+    color: #4d493b;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 6px 10px;
+}
+
+.admin-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.admin-danger-button {
+    background: #b23434;
+    color: #ffffff;
+}
+
+.admin-danger-button:hover {
+    background: #9f2d2d;
+}
+
+.admin-danger-button:active {
+    background: #8b2626;
+}
+
+.admin-danger-button:disabled,
+.admin-secondary-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.admin-secondary-button {
+    background: #e9e6d8;
+    color: #1f1f18;
+}
+
+.admin-secondary-button:hover {
+    background: #dfdbc9;
+}
+
+.admin-empty-state,
+.admin-access-denied {
+    background: #ffffff;
+    border: 1px dashed #c8c3af;
+    border-radius: 24px;
+    padding: 28px;
+    text-align: center;
+}
+
+.admin-empty-title {
+    margin: 0;
+    color: #1f1f18;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+@media (max-width: 720px) {
+    .admin-panel {
+        padding: 18px;
+    }
+
+    .admin-section-heading,
+    .admin-user-card-header,
+    .admin-post-card-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-card-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-card-actions {
+        flex-direction: column;
+    }
+
+    .admin-card-actions .button,
+    .admin-refresh-button {
+        width: 100%;
+    }
+}
