@@ -7,6 +7,12 @@
     pending: null,
   };
 
+  function isVolunteer(user = state.user) {
+    const roleCode = String(user?.role_code || '').trim().toLowerCase();
+    const roleName = String(user?.role_name || '').trim().toLowerCase();
+    return roleCode === 'vo' || roleName === 'волонтер';
+  }
+
   function dispatchAuthChanged() {
     document.dispatchEvent(
       new CustomEvent('auth:changed', {
@@ -60,7 +66,7 @@
     document.getElementById('login-button')?.classList.toggle('hidden', state.authenticated);
     document.getElementById('add-post-button')?.classList.toggle('hidden', !state.authenticated);
     document.getElementById('profile-button')?.classList.toggle('hidden', !state.authenticated);
-    document.getElementById('accepted-requests-div')?.classList.toggle('hidden', !state.authenticated);
+    document.getElementById('accepted-requests-div')?.classList.toggle('hidden', !state.authenticated || !isVolunteer());
     document.getElementById('reports-div')?.classList.toggle('hidden', !state.authenticated);
     document.body.classList.toggle('guest-user', !state.authenticated);
 
@@ -150,6 +156,9 @@
     },
     getUser() {
       return state.user;
+    },
+    isVolunteer() {
+      return isVolunteer();
     },
     renderUserProfile,
     refresh() {

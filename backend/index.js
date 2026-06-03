@@ -15,12 +15,15 @@ const rootDir = path.resolve(__dirname, '..');
 const publicDir = path.join(rootDir, 'public');
 const appShellPath = path.join(publicDir, 'pages', 'index.html');
 const appPages = new Set([
+  'fundraisers',
   'requests',
   'accepted-requests',
   'reports',
   'military',
   'volunteers',
   'admin',
+  'user-profile',
+  'public-user-profile',
 ]);
 
 async function ensureImageColumnsSupportLongValues() {
@@ -55,11 +58,11 @@ app.get('/health', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.redirect('/public/pages/index.html');
+  res.redirect('/public/fundraisers.html');
 });
 
 app.get('/public/pages/index.html', (req, res) => {
-  res.sendFile(appShellPath);
+  res.redirect('/public/fundraisers.html');
 });
 
 app.get('/public/:page.html', (req, res, next) => {

@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { readSessionPayload } = require('../session');
+const { isAdmin } = require('../utils/admin');
 const { normalizeImageList } = require('../utils/imageValidation');
 
 const REPORT_TITLES = {
@@ -83,6 +84,35 @@ function formatReport(row) {
   };
 }
 
+function formatAdminReport(row) {
+  const requestAuthorRole = row.request_author_role || '';
+  const reporterUserRole = row.user_role_name || (row.report_type === 'author' ? 'Військовий' : 'Волонтер');
+
+  return {
+    reportId: normalizeScalarId(row.report_number),
+    requestId: normalizeScalarId(row.post_id),
+    responseId: row.response_id ? normalizeScalarId(row.response_id) : '',
+    reporterId: normalizeScalarId(row.user_rnokpp),
+    reporterName: row.reporter_user_name || 'Користувач',
+    reporterRole: row.report_type || 'author',
+    reporterUserRole,
+    reportTitle: REPORT_TITLES[row.report_type] || 'Звіт',
+    text: row.report_text || '',
+    images: row.images || [],
+    createdAt: row.creation_datetime ? new Date(row.creation_datetime).getTime() : Date.now(),
+    createdAtIso: row.creation_datetime ? new Date(row.creation_datetime).toISOString() : new Date().toISOString(),
+    requestSnapshot: {
+      title: row.post_title || 'Без назви запиту',
+      description: row.post_description || '',
+      authorName: row.request_author_name || 'Невідомо',
+      authorRole: requestAuthorRole,
+      dateText: row.post_datetime ? new Date(row.post_datetime).toISOString() : '',
+      images: row.request_images || [],
+      tags: row.request_tags || [],
+    },
+  };
+}
+
 async function fetchMyReports(req, res) {
   try {
     const currentUser = await getCurrentUser(req);
@@ -147,6 +177,80 @@ async function fetchMyReports(req, res) {
     });
   } catch (error) {
     console.error('Помилка завантаження звітів:', error);
+    return res.status(500).json({ message: 'Не вдалося завантажити звіти.' });
+  }
+}
+
+async function fetchAdminReports(req, res) {
+  try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ message: 'Потрібно увійти в систему.' });
+    }
+
+    if (!isAdmin(currentUser)) {
+      return res.status(403).json({ message: 'Доступ дозволено лише адміністратору.' });
+    }
+
+    await ensureResponseStatusColumn();
+
+    const result = await pool.query(
+      `
+        SELECT
+          rpt.report_number,
+          rpt.user_rnokpp,
+          rpt.post_id,
+          rpt.report_type,
+          rpt.report_text,
+          rpt.creation_datetime,
+          p.post_title,
+          p.post_description,
+          p.post_datetime,
+          request_author.user_name AS request_author_name,
+          request_author_role.role_name AS request_author_role,
+          reporter_user.user_name AS reporter_user_name,
+          reporter_role.role_name AS user_role_name,
+          helper_response.response_id,
+          COALESCE(array_remove(array_agg(DISTINCT report_image.report_image_url), NULL), '{}') AS images,
+          COALESCE(array_remove(array_agg(DISTINCT request_image.post_image_url), NULL), '{}') AS request_images,
+          COALESCE(array_remove(array_agg(DISTINCT request_tag.tag_name), NULL), '{}') AS request_tags
+        FROM report rpt
+        LEFT JOIN post p ON p.post_id = rpt.post_id
+        LEFT JOIN app_user request_author ON request_author.user_rnokpp = p.user_rnokpp
+        LEFT JOIN role request_author_role ON request_author_role.role_id = request_author.role_id
+        LEFT JOIN app_user reporter_user ON reporter_user.user_rnokpp = rpt.user_rnokpp
+        LEFT JOIN role reporter_role ON reporter_role.role_id = reporter_user.role_id
+        LEFT JOIN response helper_response
+          ON helper_response.user_rnokpp = rpt.user_rnokpp
+          AND helper_response.post_id = rpt.post_id
+        LEFT JOIN report_image ON report_image.report_number = rpt.report_number
+        LEFT JOIN post_image request_image ON request_image.post_id = p.post_id
+        LEFT JOIN post_tag request_post_tag ON request_post_tag.post_id = p.post_id
+        LEFT JOIN tag request_tag ON request_tag.tag_id = request_post_tag.tag_id
+        GROUP BY
+          rpt.report_number,
+          rpt.user_rnokpp,
+          rpt.post_id,
+          rpt.report_type,
+          rpt.report_text,
+          rpt.creation_datetime,
+          p.post_title,
+          p.post_description,
+          p.post_datetime,
+          request_author.user_name,
+          request_author_role.role_name,
+          reporter_user.user_name,
+          reporter_role.role_name,
+          helper_response.response_id
+        ORDER BY rpt.creation_datetime DESC NULLS LAST, rpt.report_number DESC
+      `
+    );
+
+    return res.status(200).json({
+      reports: result.rows.map(formatAdminReport),
+    });
+  } catch (error) {
+    console.error('Помилка завантаження звітів для адміністратора:', error);
     return res.status(500).json({ message: 'Не вдалося завантажити звіти.' });
   }
 }
@@ -314,5 +418,6 @@ async function createReport(req, res) {
 
 module.exports = {
   createReport,
+  fetchAdminReports,
   fetchMyReports,
 };

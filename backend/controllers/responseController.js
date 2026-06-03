@@ -1,6 +1,7 @@
 const pool = require('../db');
 const { readSessionPayload } = require('../session');
 const { sendResponseNotification } = require('../services/mailer');
+const { isAdmin } = require('../utils/admin');
 const { normalizeImageList } = require('../utils/imageValidation');
 
 function getDefaultAvatar(roleCode) {
@@ -97,6 +98,32 @@ function formatAcceptedRequest(row, currentUser) {
   };
 }
 
+function formatAdminResponse(row) {
+  const authorRoleCode = normalizeNumericId(row.author_role_id) === 2 ? 'mi' : 'vo';
+  const responderRoleCode = normalizeNumericId(row.responder_role_id) === 2 ? 'mi' : 'vo';
+
+  return {
+    responseId: normalizeScalarId(row.response_id),
+    requestId: normalizeScalarId(row.post_id),
+    responderId: normalizeScalarId(row.user_rnokpp),
+    responderName: row.responder_name || 'Користувач',
+    responderRole: row.responder_role_name || (responderRoleCode === 'mi' ? 'Військовий' : 'Волонтер'),
+    authorId: normalizeScalarId(row.author_rnokpp),
+    authorName: row.author_name || 'Користувач',
+    authorRole: row.author_role_name || (authorRoleCode === 'mi' ? 'Військовий' : 'Волонтер'),
+    title: row.post_title || '',
+    description: row.post_description || '',
+    tags: row.tags || [],
+    images: row.post_images || [],
+    responseTitle: row.response_title || '',
+    responseDescription: row.response_description || '',
+    responseImages: row.response_images || [],
+    createdAt: row.response_datetime ? new Date(row.response_datetime).getTime() : Date.now(),
+    createdAtIso: row.response_datetime ? new Date(row.response_datetime).toISOString() : new Date().toISOString(),
+    status: row.post_status === 'closed' ? 'closed' : (row.response_status || 'open'),
+  };
+}
+
 async function fetchAcceptedRequests(req, res) {
   try {
     const currentUser = await getCurrentUser(req);
@@ -162,6 +189,85 @@ async function fetchAcceptedRequests(req, res) {
   } catch (error) {
     console.error('Помилка завантаження прийнятих запитів:', error);
     return res.status(500).json({ message: 'Не вдалося завантажити прийняті запити.' });
+  }
+}
+
+async function fetchAdminResponses(req, res) {
+  try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ message: 'Потрібно увійти в систему.' });
+    }
+
+    if (!isAdmin(currentUser)) {
+      return res.status(403).json({ message: 'Доступ дозволено лише адміністратору.' });
+    }
+
+    await ensureResponseStatusColumn();
+
+    const result = await pool.query(
+      `
+        SELECT
+          rsp.response_id,
+          rsp.user_rnokpp,
+          rsp.post_id,
+          rsp.response_status,
+          rsp.response_title,
+          rsp.response_description,
+          rsp.response_datetime,
+          p.post_title,
+          p.post_description,
+          p.post_status,
+          author.user_name AS author_name,
+          author.user_rnokpp AS author_rnokpp,
+          author.user_image_url AS author_image_url,
+          author.role_id AS author_role_id,
+          author_role.role_name AS author_role_name,
+          responder.user_name AS responder_name,
+          responder.role_id AS responder_role_id,
+          responder_role.role_name AS responder_role_name,
+          COALESCE(array_remove(array_agg(DISTINCT t.tag_name), NULL), '{}') AS tags,
+          COALESCE(array_remove(array_agg(DISTINCT pi.post_image_url), NULL), '{}') AS post_images,
+          COALESCE(array_remove(array_agg(DISTINCT ri.response_image_url), NULL), '{}') AS response_images
+        FROM response rsp
+        INNER JOIN post p ON p.post_id = rsp.post_id
+        LEFT JOIN app_user author ON author.user_rnokpp = p.user_rnokpp
+        LEFT JOIN role author_role ON author_role.role_id = author.role_id
+        LEFT JOIN app_user responder ON responder.user_rnokpp = rsp.user_rnokpp
+        LEFT JOIN role responder_role ON responder_role.role_id = responder.role_id
+        LEFT JOIN post_tag ptg ON ptg.post_id = p.post_id
+        LEFT JOIN tag t ON t.tag_id = ptg.tag_id
+        LEFT JOIN post_image pi ON pi.post_id = p.post_id
+        LEFT JOIN response_image ri ON ri.response_id = rsp.response_id
+        GROUP BY
+          rsp.response_id,
+          rsp.user_rnokpp,
+          rsp.post_id,
+          rsp.response_status,
+          rsp.response_title,
+          rsp.response_description,
+          rsp.response_datetime,
+          p.post_title,
+          p.post_description,
+          p.post_status,
+          author.user_name,
+          author.user_rnokpp,
+          author.user_image_url,
+          author.role_id,
+          author_role.role_name,
+          responder.user_name,
+          responder.role_id,
+          responder_role.role_name
+        ORDER BY rsp.response_datetime DESC NULLS LAST, rsp.response_id DESC
+      `
+    );
+
+    return res.status(200).json({
+      responses: result.rows.map(formatAdminResponse),
+    });
+  } catch (error) {
+    console.error('Помилка завантаження відгуків для адміністратора:', error);
+    return res.status(500).json({ message: 'Не вдалося завантажити відгуки.' });
   }
 }
 
@@ -377,5 +483,6 @@ async function deleteResponse(req, res) {
 module.exports = {
   createResponse,
   deleteResponse,
+  fetchAdminResponses,
   fetchAcceptedRequests,
 };

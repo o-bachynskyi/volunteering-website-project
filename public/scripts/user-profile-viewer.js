@@ -1,5 +1,6 @@
 (function () {
-  let currentUserLoad = null;
+  const STORAGE_KEY = 'selectedPublicUserId';
+  const DEFAULT_AVATAR = '/public/images/account-icon.png';
 
   function escapeHtml(text = '') {
     return String(text)
@@ -10,9 +11,21 @@
       .replaceAll("'", '&#39;');
   }
 
+  function normalizeId(value) {
+    return String(value || '').trim();
+  }
+
+  function getSelectedUserId() {
+    return normalizeId(localStorage.getItem(STORAGE_KEY));
+  }
+
+  function setSelectedUserId(userId) {
+    localStorage.setItem(STORAGE_KEY, normalizeId(userId));
+  }
+
   function buildTags(tags = []) {
     if (!tags.length) {
-      return '<p class="public-profile-empty">Теги поки що не додано.</p>';
+      return '<p class="public-user-profile-empty">Теги поки що не додано.</p>';
     }
 
     return tags.map((tag) => `
@@ -22,95 +35,186 @@
     `).join('');
   }
 
-  function ensureProfileViewer() {
-    let overlay = document.getElementById('public-profile-overlay');
-    let modal = document.getElementById('public-profile-modal');
-
-    if (overlay && modal) {
-      return { overlay, modal };
+  function formatDateText(value) {
+    if (!value) {
+      return 'Невідомо';
     }
 
-    overlay = document.createElement('div');
-    overlay.id = 'public-profile-overlay';
-    overlay.className = 'modal-overlay hidden public-profile-overlay';
+    const timestamp = Number(value);
+    if (Number.isFinite(timestamp)) {
+      return new Intl.DateTimeFormat('uk-UA', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(timestamp));
+    }
 
-    modal = document.createElement('div');
-    modal.id = 'public-profile-modal';
-    modal.className = 'public-profile-modal-window hidden';
-    modal.innerHTML = `
-      <button type="button" class="close-modal-button public-profile-close" aria-label="Закрити профіль">
-        <img src="/public/images/close-modal-icon.png" alt="Close profile">
-      </button>
-      <div class="public-profile-content" id="public-profile-content"></div>
-    `;
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return new Intl.DateTimeFormat('uk-UA', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(parsed);
+    }
 
-    document.body.appendChild(overlay);
-    document.body.appendChild(modal);
-
-    const close = () => {
-      overlay.classList.add('hidden');
-      modal.classList.add('hidden');
-      document.body.classList.remove('modal-open');
-    };
-
-    overlay.addEventListener('click', close);
-    modal.querySelector('.public-profile-close')?.addEventListener('click', close);
-
-    return { overlay, modal };
+    return String(value);
   }
 
-  function renderProfile(user) {
+  function buildImages(images = []) {
+    return images.map((imageUrl) => `
+      <img src="${escapeHtml(imageUrl)}" alt="Фото допису" class="photo">
+    `).join('');
+  }
+
+  function buildPublicPostCard(post, user) {
+    const isRequest = post.type === 'request';
+    const isClosed = post.status === 'closed';
+
     return `
-      <section class="public-profile-card">
-        <header class="public-profile-header">
-          <img src="${escapeHtml(user.image_url || '/public/images/account-icon.png')}" alt="Фото профілю" class="public-profile-image">
-          <div class="public-profile-info">
-            <p class="public-profile-name">${escapeHtml(user.full_name || 'Користувач')}</p>
-            <p class="public-profile-role">${escapeHtml(user.role_name || 'Роль не визначена')}</p>
-            <div class="profile-tags public-profile-tags">${buildTags(user.tags || [])}</div>
+      <article class="post ${isRequest ? 'request-post-card' : ''}">
+        <header class="post-header">
+          <img src="${escapeHtml(user.image_url || DEFAULT_AVATAR)}" alt="Фото профілю" class="post-profile-pic">
+          <div class="post-data">
+            <div class="user-info">
+              <p class="name">${escapeHtml(user.full_name || 'Користувач')}</p>
+              <p class="dot">•</p>
+              <time class="post-date">${escapeHtml(post.dateText || formatDateText(post.createdAt))}</time>
+            </div>
+            <p class="user-role">${escapeHtml(user.role_name || 'Користувач')}</p>
+            ${isRequest ? `<p class="request-status ${isClosed ? 'is-closed' : 'is-open'}">${isClosed ? 'Закритий' : 'Відкритий'}</p>` : ''}
           </div>
         </header>
-        <div class="profile-divider public-profile-divider">
-          <hr class="line">
-          <span class="divider-text">ОПИС</span>
-          <hr class="line">
+        <div class="post-content">
+          ${post.tags?.length ? `<div class="profile-tags">${buildTags(post.tags)}</div>` : ''}
+          <h2 class="post-title">${escapeHtml(post.title || 'Без назви')}</h2>
+          <p class="post-description">${escapeHtml(post.description || '')}</p>
+          ${post.images?.length ? `<section class="post-photos">${buildImages(post.images)}</section>` : ''}
         </div>
-        <p class="public-profile-description">${escapeHtml(user.description || 'Опис поки що не заповнений.')}</p>
-      </section>
+      </article>
     `;
   }
 
-  async function openUserProfile(userId) {
-    const normalizedUserId = String(userId || '').trim();
-    if (!normalizedUserId) return;
+  function setProfileLoadingState(message) {
+    const description = document.getElementById('public-user-profile-description');
+    const postsContainer = document.getElementById('public-generated-profile-posts');
+    if (description) {
+      description.textContent = message;
+    }
+    if (postsContainer) {
+      postsContainer.innerHTML = `<p class="public-user-profile-empty">${escapeHtml(message)}</p>`;
+    }
+  }
 
-    const { overlay, modal } = ensureProfileViewer();
-    const content = modal.querySelector('#public-profile-content');
-    if (!content) return;
+  async function loadJson(url) {
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+    });
 
-    overlay.classList.remove('hidden');
-    modal.classList.remove('hidden');
-    document.body.classList.add('modal-open');
-    content.innerHTML = '<p class="public-profile-loading">Завантажуємо профіль...</p>';
+    const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+    if (!contentType.includes('application/json')) {
+      const body = await response.text();
+      throw new Error(body?.startsWith('<!DOCTYPE') ? 'Сторінку профілю не вдалося завантажити.' : 'Сервер повернув некоректну відповідь.');
+    }
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Не вдалося завантажити дані.');
+    }
+
+    return result;
+  }
+
+  function populateProfile(user) {
+    const avatar = document.getElementById('public-user-profile-avatar');
+    const name = document.getElementById('public-user-profile-name');
+    const role = document.getElementById('public-user-profile-role');
+    const description = document.getElementById('public-user-profile-description');
+    const tags = document.getElementById('public-user-profile-tags');
+
+    if (avatar) avatar.src = user.image_url || DEFAULT_AVATAR;
+    if (name) name.textContent = user.full_name || 'Користувач';
+    if (role) role.textContent = user.role_name || 'Роль не визначена';
+    if (description) description.textContent = user.description || 'Опис поки що не заповнений.';
+    if (tags) tags.innerHTML = buildTags(user.tags || []);
+  }
+
+  function renderPosts(posts, user) {
+    const container = document.getElementById('public-generated-profile-posts');
+    if (!container) return;
+
+    if (!posts.length) {
+      container.innerHTML = '<p class="public-user-profile-empty">У цього користувача ще немає дописів.</p>';
+      return;
+    }
+
+    container.innerHTML = posts.map((post) => buildPublicPostCard(post, user)).join('');
+  }
+
+  async function renderCurrentProfile() {
+    const pageRoot = document.querySelector('.public-user-profile-page');
+    if (!pageRoot) {
+      return;
+    }
+
+    const userId = getSelectedUserId();
+    if (!userId) {
+      setProfileLoadingState('Не вибрано користувача для перегляду профілю.');
+      return;
+    }
+
+    setProfileLoadingState('Завантажуємо профіль...');
 
     try {
-      currentUserLoad = fetch(`/users/${encodeURIComponent(normalizedUserId)}`, {
-        credentials: 'same-origin',
-      });
-      const response = await currentUserLoad;
-      const result = await response.json();
+      const [{ user }, postsResult] = await Promise.all([
+        loadJson(`/users/${encodeURIComponent(userId)}`),
+        loadJson('/posts'),
+      ]);
 
-      if (!response.ok) {
-        throw new Error(result.message || 'Не вдалося завантажити профіль.');
-      }
+      const posts = Array.isArray(postsResult.posts)
+        ? postsResult.posts
+            .filter((post) => normalizeId(post.authorId) === userId)
+            .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+        : [];
 
-      content.innerHTML = renderProfile(result.user || result);
+      populateProfile(user || {});
+      renderPosts(posts, user || {});
     } catch (error) {
       console.error('Помилка відкриття профілю:', error);
-      content.innerHTML = `<p class="public-profile-empty">${escapeHtml(error.message || 'Не вдалося завантажити профіль.')}</p>`;
-    } finally {
-      currentUserLoad = null;
+      setProfileLoadingState(error.message || 'Не вдалося завантажити профіль користувача.');
     }
+  }
+
+  function openUserProfile(userId) {
+    const normalizedUserId = normalizeId(userId);
+    if (!normalizedUserId) {
+      return;
+    }
+
+    const currentUserId = normalizeId(window.AuthState?.getUser()?.rnokpp);
+    if (currentUserId && currentUserId === normalizedUserId) {
+      localStorage.setItem('selectedPage', 'user-profile');
+      if (window.AppShell?.loadPage) {
+        void window.AppShell.loadPage('user-profile');
+      } else {
+        window.location.href = '/public/pages/index.html';
+      }
+      return;
+    }
+
+    setSelectedUserId(normalizedUserId);
+    localStorage.setItem('selectedPage', 'public-user-profile');
+
+    if (window.AppShell?.loadPage) {
+      void window.AppShell.loadPage('public-user-profile');
+      return;
+    }
+
+    window.location.href = '/public/public-user-profile.html';
   }
 
   document.addEventListener('click', (event) => {
@@ -119,6 +223,18 @@
 
     event.preventDefault();
     event.stopPropagation();
-    void openUserProfile(trigger.dataset.userId);
+    openUserProfile(trigger.dataset.userId);
   });
+
+  document.addEventListener('page:loaded', () => {
+    if (document.querySelector('.public-user-profile-page')) {
+      void renderCurrentProfile();
+    }
+  });
+
+  window.PublicUserProfile = {
+    getSelectedUserId,
+    openUserProfile,
+    renderCurrentProfile,
+  };
 })();

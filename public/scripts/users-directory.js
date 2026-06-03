@@ -24,7 +24,7 @@
 
   function buildUserCard(user) {
     return `
-      <a href="#" class="user-card-link user-profile-open" data-user-id="${escapeHtml(user.rnokpp)}">
+      <a href="/public/public-user-profile.html" class="user-card-link user-profile-open" data-user-id="${escapeHtml(user.rnokpp)}">
         <article class="user-card">
           <div class="card-content">
             <img src="${escapeHtml(user.image_url)}" alt="User Profile Picture" class="profile-pic">

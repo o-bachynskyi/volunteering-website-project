@@ -3,6 +3,8 @@
     hasAccess: false,
     users: [],
     posts: [],
+    responses: [],
+    reports: [],
     accessRequest: null,
     filters: {
       userSearch: '',
@@ -14,6 +16,12 @@
       postStatus: 'all',
       postSort: 'date-desc',
       postRemovableOnly: false,
+      responseSearch: '',
+      responseStatus: 'all',
+      responseSort: 'date-desc',
+      reportSearch: '',
+      reportType: 'all',
+      reportSort: 'date-desc',
     },
   };
 
@@ -52,9 +60,7 @@
 
   function setFeedback(message, type = 'success') {
     const element = getFeedbackElement();
-    if (!element) {
-      return;
-    }
+    if (!element) return;
 
     if (!message) {
       element.textContent = '';
@@ -69,10 +75,45 @@
     element.classList.toggle('is-error', type === 'error');
   }
 
+  function formatDate(value) {
+    if (!value) return 'Дата невідома';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return 'Дата невідома';
+    }
+
+    return date.toLocaleString('uk-UA', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function buildTags(tags = []) {
+    if (!tags.length) return '';
+
+    return `
+      <div class="admin-tags">
+        ${tags.map((tag) => `<span class="admin-tag">${escapeHtml(tag)}</span>`).join('')}
+      </div>
+    `;
+  }
+
+  function getUserActivity(user) {
+    return Number(user.postCount || 0) + Number(user.responseCount || 0) + Number(user.reportCount || 0);
+  }
+
+  function isUserInactive(user) {
+    return getUserActivity(user) === 0;
+  }
+
   function isUserRemovable(user) {
     const currentUser = getCurrentUser();
     const isCurrentAdmin = currentUser?.rnokpp === user.rnokpp;
-    const hasLinkedActivity = user.postCount > 0 || user.responseCount > 0 || user.reportCount > 0;
+    const hasLinkedActivity = getUserActivity(user) > 0;
     return !isCurrentAdmin && !hasLinkedActivity && !user.isProtectedAdmin;
   }
 
@@ -91,9 +132,7 @@
         return false;
       }
 
-      if (!query) {
-        return true;
-      }
+      if (!query) return true;
 
       const haystack = [
         user.full_name,
@@ -110,19 +149,14 @@
       switch (state.filters.userSort) {
         case 'name-desc':
           return normalizeSearch(right.full_name).localeCompare(normalizeSearch(left.full_name), 'uk');
-        case 'activity-desc': {
-          const leftActivity = Number(left.postCount || 0) + Number(left.responseCount || 0) + Number(left.reportCount || 0);
-          const rightActivity = Number(right.postCount || 0) + Number(right.responseCount || 0) + Number(right.reportCount || 0);
-          if (rightActivity !== leftActivity) {
-            return rightActivity - leftActivity;
+        case 'activity-desc':
+          if (getUserActivity(right) !== getUserActivity(left)) {
+            return getUserActivity(right) - getUserActivity(left);
           }
           return normalizeSearch(left.full_name).localeCompare(normalizeSearch(right.full_name), 'uk');
-        }
         case 'role': {
           const roleCompare = normalizeSearch(left.role_name).localeCompare(normalizeSearch(right.role_name), 'uk');
-          if (roleCompare !== 0) {
-            return roleCompare;
-          }
+          if (roleCompare !== 0) return roleCompare;
           return normalizeSearch(left.full_name).localeCompare(normalizeSearch(right.full_name), 'uk');
         }
         case 'name-asc':
@@ -137,27 +171,16 @@
   function getFilteredPosts() {
     const query = normalizeSearch(state.filters.postSearch);
     const posts = state.posts.filter((post) => {
-      if (state.filters.postType !== 'all' && post.type !== state.filters.postType) {
-        return false;
-      }
+      if (state.filters.postType !== 'all' && post.type !== state.filters.postType) return false;
 
       if (state.filters.postStatus !== 'all') {
         const isClosed = post.status === 'closed';
-        if (state.filters.postStatus === 'closed' && !isClosed) {
-          return false;
-        }
-        if (state.filters.postStatus === 'open' && isClosed) {
-          return false;
-        }
+        if (state.filters.postStatus === 'closed' && !isClosed) return false;
+        if (state.filters.postStatus === 'open' && isClosed) return false;
       }
 
-      if (state.filters.postRemovableOnly && !isPostRemovable(post)) {
-        return false;
-      }
-
-      if (!query) {
-        return true;
-      }
+      if (state.filters.postRemovableOnly && !isPostRemovable(post)) return false;
+      if (!query) return true;
 
       const haystack = [
         post.title,
@@ -196,74 +219,115 @@
     return posts;
   }
 
+  function getFilteredResponses() {
+    const query = normalizeSearch(state.filters.responseSearch);
+    const responses = state.responses.filter((response) => {
+      if (state.filters.responseStatus !== 'all' && response.status !== state.filters.responseStatus) {
+        return false;
+      }
+
+      if (!query) return true;
+
+      const haystack = [
+        response.responderName,
+        response.responderRole,
+        response.authorName,
+        response.authorRole,
+        response.title,
+        response.responseTitle,
+        response.responseDescription,
+        ...(Array.isArray(response.tags) ? response.tags : []),
+      ].map(normalizeSearch);
+
+      return haystack.some((value) => value.includes(query));
+    });
+
+    responses.sort((left, right) => {
+      switch (state.filters.responseSort) {
+        case 'date-asc':
+          return new Date(left.createdAtIso || left.createdAt || 0).getTime() - new Date(right.createdAtIso || right.createdAt || 0).getTime();
+        case 'volunteer':
+          return normalizeSearch(left.responderName).localeCompare(normalizeSearch(right.responderName), 'uk');
+        case 'date-desc':
+        default:
+          return new Date(right.createdAtIso || right.createdAt || 0).getTime() - new Date(left.createdAtIso || left.createdAt || 0).getTime();
+      }
+    });
+
+    return responses;
+  }
+
+  function getFilteredReports() {
+    const query = normalizeSearch(state.filters.reportSearch);
+    const reports = state.reports.filter((report) => {
+      if (state.filters.reportType !== 'all' && report.reporterRole !== state.filters.reportType) {
+        return false;
+      }
+
+      if (!query) return true;
+
+      const haystack = [
+        report.reporterName,
+        report.reportTitle,
+        report.text,
+        report.requestSnapshot?.title,
+        report.requestSnapshot?.description,
+        report.requestSnapshot?.authorName,
+        ...(Array.isArray(report.requestSnapshot?.tags) ? report.requestSnapshot.tags : []),
+      ].map(normalizeSearch);
+
+      return haystack.some((value) => value.includes(query));
+    });
+
+    reports.sort((left, right) => {
+      switch (state.filters.reportSort) {
+        case 'date-asc':
+          return new Date(left.createdAtIso || left.createdAt || 0).getTime() - new Date(right.createdAtIso || right.createdAt || 0).getTime();
+        case 'reporter':
+          return normalizeSearch(left.reporterName).localeCompare(normalizeSearch(right.reporterName), 'uk');
+        case 'date-desc':
+        default:
+          return new Date(right.createdAtIso || right.createdAt || 0).getTime() - new Date(left.createdAtIso || left.createdAt || 0).getTime();
+      }
+    });
+
+    return reports;
+  }
+
   function setSummary() {
-    const usersCountElement = document.getElementById('admin-users-count');
-    const postsCountElement = document.getElementById('admin-posts-count');
-    const openRequestsCountElement = document.getElementById('admin-open-requests-count');
-    const usersNoteElement = document.getElementById('admin-users-note');
-    const postsNoteElement = document.getElementById('admin-posts-note');
-    const openRequestsNoteElement = document.getElementById('admin-open-requests-note');
+    const summaryMap = {
+      'admin-users-count': state.users.length,
+      'admin-posts-count': state.posts.length,
+      'admin-open-requests-count': state.posts.filter((post) => post.type === 'request' && post.status !== 'closed').length,
+      'admin-responses-count': state.responses.length,
+      'admin-reports-count': state.reports.length,
+      'admin-inactive-users-count': state.users.filter(isUserInactive).length,
+    };
 
-    if (!usersCountElement || !postsCountElement || !openRequestsCountElement) {
-      return;
-    }
+    Object.entries(summaryMap).forEach(([id, value]) => {
+      const node = document.getElementById(id);
+      if (node) node.textContent = String(value);
+    });
 
-    const filteredUsers = getFilteredUsers();
-    const filteredPosts = getFilteredPosts();
-    const totalOpenRequestCount = state.posts.filter((post) => post.type === 'request' && post.status !== 'closed').length;
-    const filteredOpenRequestCount = filteredPosts.filter((post) => post.type === 'request' && post.status !== 'closed').length;
+    const noteMap = {
+      'admin-users-note': `${getFilteredUsers().length} після фільтрації`,
+      'admin-posts-note': `${getFilteredPosts().length} після фільтрації`,
+      'admin-open-requests-note': `${getFilteredPosts().filter((post) => post.type === 'request' && post.status !== 'closed').length} після фільтрації`,
+      'admin-responses-note': `${getFilteredResponses().length} після фільтрації`,
+      'admin-reports-note': `${getFilteredReports().length} після фільтрації`,
+      'admin-inactive-users-note': 'без дописів, відгуків і звітів',
+    };
 
-    usersCountElement.textContent = String(state.users.length);
-    postsCountElement.textContent = String(state.posts.length);
-    openRequestsCountElement.textContent = String(totalOpenRequestCount);
-
-    if (usersNoteElement) {
-      usersNoteElement.textContent = `${filteredUsers.length} після фільтрації`;
-    }
-
-    if (postsNoteElement) {
-      postsNoteElement.textContent = `${filteredPosts.length} після фільтрації`;
-    }
-
-    if (openRequestsNoteElement) {
-      openRequestsNoteElement.textContent = `${filteredOpenRequestCount} після фільтрації`;
-    }
-  }
-
-  function formatDate(value) {
-    if (!value) {
-      return 'Дата невідома';
-    }
-
-    try {
-      return new Date(value).toLocaleString('uk-UA', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch (error) {
-      return 'Дата невідома';
-    }
-  }
-
-  function buildTags(tags = []) {
-    if (!tags.length) {
-      return '';
-    }
-
-    return `
-      <div class="admin-tags">
-        ${tags.map((tag) => `<span class="admin-tag">${escapeHtml(tag)}</span>`).join('')}
-      </div>
-    `;
+    Object.entries(noteMap).forEach(([id, value]) => {
+      const node = document.getElementById(id);
+      if (node) node.textContent = value;
+    });
   }
 
   function buildUserCard(user) {
     const currentUser = getCurrentUser();
     const isCurrentAdmin = currentUser?.rnokpp === user.rnokpp;
-    const hasLinkedActivity = user.postCount > 0 || user.responseCount > 0 || user.reportCount > 0;
+    const hasLinkedActivity = getUserActivity(user) > 0;
     const removable = isUserRemovable(user);
     const disabledTitle = isCurrentAdmin
       ? 'Не можна видалити власний акаунт.'
@@ -298,6 +362,9 @@
         </div>
         ${buildTags(user.tags || [])}
         <div class="admin-card-actions">
+          <button type="button" class="button admin-secondary-button admin-view-user-button" data-user-rnokpp="${escapeHtml(user.rnokpp)}">
+            Деталі
+          </button>
           <button
             type="button"
             class="button admin-danger-button admin-delete-user-button"
@@ -305,7 +372,7 @@
             ${removable ? '' : 'disabled'}
             title="${escapeHtml(disabledTitle)}"
           >
-            Видалити користувача
+            Видалити
           </button>
         </div>
       </article>
@@ -324,9 +391,7 @@
         <div class="admin-post-card-header">
           <div class="admin-post-meta">
             <h3 class="admin-post-title">${escapeHtml(post.title || 'Без назви')}</h3>
-            <p class="admin-post-author">
-              ${escapeHtml(post.authorName || 'Користувач')} • ${escapeHtml(post.authorRole || 'Роль невідома')}
-            </p>
+            <p class="admin-post-author">${escapeHtml(post.authorName || 'Користувач')} • ${escapeHtml(post.authorRole || 'Роль невідома')}</p>
           </div>
           <div class="admin-post-badges">
             <span class="admin-post-badge ${typeClass}">${escapeHtml(typeLabel)}</span>
@@ -353,6 +418,9 @@
         </div>
         ${buildTags(post.tags || [])}
         <div class="admin-card-actions">
+          <button type="button" class="button admin-secondary-button admin-view-post-button" data-post-id="${escapeHtml(post.postId)}">
+            Деталі
+          </button>
           <button
             type="button"
             class="button admin-danger-button admin-delete-post-button"
@@ -360,7 +428,55 @@
             ${removable ? '' : 'disabled'}
             title="${removable ? '' : 'Не можна видалити допис із пов’язаними відгуками або звітами.'}"
           >
-            Видалити допис
+            Видалити
+          </button>
+        </div>
+      </article>
+    `;
+  }
+
+  function buildResponseCard(response) {
+    const statusClass = response.status === 'closed' ? 'is-closed' : 'is-open';
+
+    return `
+      <article class="admin-item-card" data-response-id="${escapeHtml(response.responseId)}">
+        <div class="admin-item-card-header">
+          <div class="admin-item-meta">
+            <h3 class="admin-item-title">${escapeHtml(response.responseTitle || 'Відгук без заголовка')}</h3>
+            <p class="admin-item-subtitle">Волонтер: ${escapeHtml(response.responderName)} • Запит: ${escapeHtml(response.title || 'Без назви')}</p>
+          </div>
+          <div class="admin-item-badges">
+            <span class="admin-item-badge ${statusClass}">${response.status === 'closed' ? 'Закритий' : 'Відкритий'}</span>
+          </div>
+        </div>
+        <p class="admin-item-text">${escapeHtml(response.responseDescription || 'Текст відгуку відсутній.')}</p>
+        <div class="admin-card-actions">
+          <button type="button" class="button admin-secondary-button admin-view-response-button" data-response-id="${escapeHtml(response.responseId)}">
+            Деталі
+          </button>
+        </div>
+      </article>
+    `;
+  }
+
+  function buildReportCard(report) {
+    const typeClass = report.reporterRole === 'helper' ? 'is-helper' : 'is-author';
+
+    return `
+      <article class="admin-item-card" data-report-id="${escapeHtml(report.reportId)}">
+        <div class="admin-item-card-header">
+          <div class="admin-item-meta">
+            <h3 class="admin-item-title">${escapeHtml(report.reportTitle || 'Звіт')}</h3>
+            <p class="admin-item-subtitle">Автор: ${escapeHtml(report.reporterName || 'Користувач')} • Запит: ${escapeHtml(report.requestSnapshot?.title || 'Без назви')}</p>
+          </div>
+          <div class="admin-item-badges">
+            <span class="admin-item-badge ${typeClass}">${report.reporterRole === 'helper' ? 'Від волонтера' : 'Від автора запиту'}</span>
+          </div>
+        </div>
+        <p class="admin-item-text">${escapeHtml(report.text || 'Текст звіту відсутній.')}</p>
+        <div class="admin-card-actions">
+          <button type="button" class="button admin-secondary-button admin-view-report-button" data-report-id="${escapeHtml(report.reportId)}">
+            Деталі
           </button>
         </div>
       </article>
@@ -368,9 +484,7 @@
   }
 
   function renderEmptyState(container, title, text) {
-    if (!container) {
-      return;
-    }
+    if (!container) return;
 
     container.innerHTML = `
       <div class="admin-empty-state">
@@ -382,9 +496,7 @@
 
   function renderUsers() {
     const container = document.getElementById('admin-users-list');
-    if (!container) {
-      return;
-    }
+    if (!container) return;
 
     const users = getFilteredUsers();
     if (!users.length) {
@@ -397,9 +509,7 @@
 
   function renderPosts() {
     const container = document.getElementById('admin-posts-list');
-    if (!container) {
-      return;
-    }
+    if (!container) return;
 
     const posts = getFilteredPosts();
     if (!posts.length) {
@@ -410,32 +520,77 @@
     container.innerHTML = posts.map(buildPostCard).join('');
   }
 
+  function renderResponses() {
+    const container = document.getElementById('admin-responses-list');
+    if (!container) return;
+
+    const responses = getFilteredResponses();
+    if (!responses.length) {
+      renderEmptyState(container, 'Відгуків не знайдено', 'За поточними фільтрами немає відгуків для відображення.');
+      return;
+    }
+
+    container.innerHTML = responses.map(buildResponseCard).join('');
+  }
+
+  function renderReports() {
+    const container = document.getElementById('admin-reports-list');
+    if (!container) return;
+
+    const reports = getFilteredReports();
+    if (!reports.length) {
+      renderEmptyState(container, 'Звітів не знайдено', 'За поточними фільтрами немає звітів для відображення.');
+      return;
+    }
+
+    container.innerHTML = reports.map(buildReportCard).join('');
+  }
+
   function applyFilters() {
     renderUsers();
     renderPosts();
+    renderResponses();
+    renderReports();
     setSummary();
   }
 
   function bindFilterValues() {
-    const userSearch = document.getElementById('admin-user-search');
-    const userRole = document.getElementById('admin-user-role-filter');
-    const userSort = document.getElementById('admin-user-sort');
-    const userRemovable = document.getElementById('admin-user-removable-filter');
-    const postSearch = document.getElementById('admin-post-search');
-    const postType = document.getElementById('admin-post-type-filter');
-    const postStatus = document.getElementById('admin-post-status-filter');
-    const postSort = document.getElementById('admin-post-sort');
-    const postRemovable = document.getElementById('admin-post-removable-filter');
+    const mapping = [
+      ['admin-user-search', 'value', 'userSearch'],
+      ['admin-user-role-filter', 'value', 'userRole'],
+      ['admin-user-sort', 'value', 'userSort'],
+      ['admin-user-removable-filter', 'checked', 'userRemovableOnly'],
+      ['admin-post-search', 'value', 'postSearch'],
+      ['admin-post-type-filter', 'value', 'postType'],
+      ['admin-post-status-filter', 'value', 'postStatus'],
+      ['admin-post-sort', 'value', 'postSort'],
+      ['admin-post-removable-filter', 'checked', 'postRemovableOnly'],
+      ['admin-response-search', 'value', 'responseSearch'],
+      ['admin-response-status-filter', 'value', 'responseStatus'],
+      ['admin-response-sort', 'value', 'responseSort'],
+      ['admin-report-search', 'value', 'reportSearch'],
+      ['admin-report-type-filter', 'value', 'reportType'],
+      ['admin-report-sort', 'value', 'reportSort'],
+    ];
 
-    if (userSearch) userSearch.value = state.filters.userSearch;
-    if (userRole) userRole.value = state.filters.userRole;
-    if (userSort) userSort.value = state.filters.userSort;
-    if (userRemovable) userRemovable.checked = state.filters.userRemovableOnly;
-    if (postSearch) postSearch.value = state.filters.postSearch;
-    if (postType) postType.value = state.filters.postType;
-    if (postStatus) postStatus.value = state.filters.postStatus;
-    if (postSort) postSort.value = state.filters.postSort;
-    if (postRemovable) postRemovable.checked = state.filters.postRemovableOnly;
+    mapping.forEach(([id, prop, key]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element[prop] = state.filters[key];
+      }
+    });
+  }
+
+  async function fetchJson(url, options = {}) {
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+      ...options,
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.message || `Request failed: ${response.status}`);
+    }
+    return result;
   }
 
   async function fetchAdminUsers(force = false) {
@@ -443,6 +598,8 @@
       state.hasAccess = false;
       state.users = [];
       state.posts = [];
+      state.responses = [];
+      state.reports = [];
       toggleAdminNav(false);
       return false;
     }
@@ -453,19 +610,7 @@
 
     state.accessRequest = (async () => {
       try {
-        const response = await fetch('/users/admin', {
-          credentials: 'same-origin',
-        });
-
-        if (!response.ok) {
-          state.hasAccess = false;
-          state.users = [];
-          state.posts = [];
-          toggleAdminNav(false);
-          return false;
-        }
-
-        const result = await response.json();
+        const result = await fetchJson('/users/admin');
         state.hasAccess = true;
         state.users = Array.isArray(result.users) ? result.users : [];
         toggleAdminNav(true);
@@ -475,6 +620,8 @@
         state.hasAccess = false;
         state.users = [];
         state.posts = [];
+        state.responses = [];
+        state.reports = [];
         toggleAdminNav(false);
         return false;
       } finally {
@@ -487,15 +634,7 @@
 
   async function fetchPosts() {
     try {
-      const response = await fetch('/posts', {
-        credentials: 'same-origin',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load posts: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await fetchJson('/posts');
       state.posts = Array.isArray(result.posts) ? result.posts : [];
     } catch (error) {
       console.error('Помилка завантаження дописів для адміністратора:', error);
@@ -503,10 +642,301 @@
     }
   }
 
+  async function fetchResponses() {
+    try {
+      const result = await fetchJson('/responses/admin');
+      state.responses = Array.isArray(result.responses) ? result.responses : [];
+    } catch (error) {
+      console.error('Помилка завантаження відгуків для адміністратора:', error);
+      state.responses = [];
+    }
+  }
+
+  async function fetchReports() {
+    try {
+      const result = await fetchJson('/reports/admin');
+      state.reports = Array.isArray(result.reports) ? result.reports : [];
+    } catch (error) {
+      console.error('Помилка завантаження звітів для адміністратора:', error);
+      state.reports = [];
+    }
+  }
+
+  function getModalNodes() {
+    return {
+      overlay: document.getElementById('admin-modal-overlay'),
+      modal: document.getElementById('admin-modal'),
+      title: document.getElementById('admin-modal-title'),
+      body: document.getElementById('admin-modal-body'),
+      actions: document.getElementById('admin-modal-actions'),
+    };
+  }
+
+  function closeAdminModal() {
+    const { overlay, modal, actions } = getModalNodes();
+    overlay?.classList.add('hidden');
+    modal?.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    if (actions) {
+      actions.innerHTML = '';
+    }
+  }
+
+  function openAdminModal({ title, bodyHtml, actions = [] }) {
+    const nodes = getModalNodes();
+    if (!nodes.overlay || !nodes.modal || !nodes.title || !nodes.body || !nodes.actions) {
+      return;
+    }
+
+    nodes.title.textContent = title;
+    nodes.body.innerHTML = bodyHtml;
+    nodes.actions.innerHTML = '';
+
+    actions.forEach((action) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `button ${action.className || 'admin-secondary-button'}`;
+      button.textContent = action.label;
+      button.addEventListener('click', async () => {
+        try {
+          await action.onClick?.();
+        } finally {
+          if (action.closeOnClick !== false) {
+            closeAdminModal();
+          }
+        }
+      });
+      nodes.actions.appendChild(button);
+    });
+
+    nodes.overlay.classList.remove('hidden');
+    nodes.modal.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+  }
+
+  function buildMiniList(items, renderItem, emptyText) {
+    if (!items.length) {
+      return `<p class="admin-modal-copy">${escapeHtml(emptyText)}</p>`;
+    }
+
+    return `
+      <ul class="admin-modal-list">
+        ${items.map(renderItem).join('')}
+      </ul>
+    `;
+  }
+
+  function showUserDetails(user) {
+    const userPosts = state.posts.filter((post) => post.authorId === user.rnokpp).slice(0, 5);
+    const userResponses = state.responses.filter((response) => response.responderId === user.rnokpp).slice(0, 5);
+    const userReports = state.reports.filter((report) => report.reporterId === user.rnokpp).slice(0, 5);
+
+    openAdminModal({
+      title: `Користувач: ${user.full_name}`,
+      bodyHtml: `
+        <div class="admin-modal-pills">
+          <span class="admin-modal-pill">${escapeHtml(user.role_name)}</span>
+          ${isUserInactive(user) ? '<span class="admin-modal-pill is-closed">Без активності</span>' : '<span class="admin-modal-pill is-open">Є активність</span>'}
+        </div>
+        <div class="admin-modal-grid">
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">РНОКПП</p>
+            <p class="admin-modal-grid-value">${escapeHtml(user.rnokpp)}</p>
+          </div>
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Email</p>
+            <p class="admin-modal-grid-value">${escapeHtml(user.email || 'Не вказано')}</p>
+          </div>
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Опис</p>
+            <p class="admin-modal-grid-value">${escapeHtml(user.description || 'Не заповнено')}</p>
+          </div>
+        </div>
+        ${buildTags(user.tags || [])}
+        <div class="admin-modal-stats">
+          <div class="admin-stat"><p class="admin-stat-label">Дописи</p><p class="admin-stat-value">${user.postCount}</p></div>
+          <div class="admin-stat"><p class="admin-stat-label">Відгуки</p><p class="admin-stat-value">${user.responseCount}</p></div>
+          <div class="admin-stat"><p class="admin-stat-label">Звіти</p><p class="admin-stat-value">${user.reportCount}</p></div>
+        </div>
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Останні дописи</h3>
+          ${buildMiniList(
+            userPosts,
+            (post) => `<li class="admin-modal-list-item"><p class="admin-modal-list-title">${escapeHtml(post.title || 'Без назви')}</p><p class="admin-modal-list-text">${escapeHtml(post.typeName || '')} • ${escapeHtml(formatDate(post.createdAtIso || post.createdAt))}</p></li>`,
+            'У користувача ще немає дописів.'
+          )}
+        </section>
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Останні відгуки</h3>
+          ${buildMiniList(
+            userResponses,
+            (response) => `<li class="admin-modal-list-item"><p class="admin-modal-list-title">${escapeHtml(response.responseTitle || 'Відгук без заголовка')}</p><p class="admin-modal-list-text">${escapeHtml(response.title || 'Без назви запиту')} • ${escapeHtml(formatDate(response.createdAtIso || response.createdAt))}</p></li>`,
+            'У користувача ще немає відгуків.'
+          )}
+        </section>
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Останні звіти</h3>
+          ${buildMiniList(
+            userReports,
+            (report) => `<li class="admin-modal-list-item"><p class="admin-modal-list-title">${escapeHtml(report.reportTitle || 'Звіт')}</p><p class="admin-modal-list-text">${escapeHtml(report.requestSnapshot?.title || 'Без назви')} • ${escapeHtml(formatDate(report.createdAtIso || report.createdAt))}</p></li>`,
+            'У користувача ще немає звітів.'
+          )}
+        </section>
+      `,
+      actions: [
+        { label: 'Закрити', className: 'admin-secondary-button' },
+      ],
+    });
+  }
+
+  function showPostDetails(post) {
+    const postResponses = state.responses.filter((response) => String(response.requestId) === String(post.postId));
+    const postReports = state.reports.filter((report) => String(report.requestId) === String(post.postId));
+    const removable = isPostRemovable(post);
+
+    openAdminModal({
+      title: `Допис: ${post.title || 'Без назви'}`,
+      bodyHtml: `
+        <div class="admin-modal-pills">
+          <span class="admin-modal-pill ${post.type === 'request' ? 'is-request' : 'is-fundraising'}">${escapeHtml(post.typeName || post.type)}</span>
+          <span class="admin-modal-pill ${post.status === 'closed' ? 'is-closed' : 'is-open'}">${post.status === 'closed' ? 'Закритий' : 'Активний'}</span>
+          <span class="admin-modal-pill ${removable ? 'is-open' : 'is-closed'}">${removable ? 'Можна видалити' : 'Є пов’язана активність'}</span>
+        </div>
+        <div class="admin-modal-grid">
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Автор</p>
+            <p class="admin-modal-grid-value">${escapeHtml(post.authorName || 'Користувач')}</p>
+          </div>
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Роль автора</p>
+            <p class="admin-modal-grid-value">${escapeHtml(post.authorRole || 'Не визначено')}</p>
+          </div>
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Створено</p>
+            <p class="admin-modal-grid-value">${escapeHtml(formatDate(post.createdAtIso || post.createdAt))}</p>
+          </div>
+        </div>
+        ${buildTags(post.tags || [])}
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Опис</h3>
+          <p class="admin-modal-copy">${escapeHtml(post.description || 'Опис відсутній.')}</p>
+        </section>
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Пов’язані відгуки</h3>
+          ${buildMiniList(
+            postResponses,
+            (response) => `<li class="admin-modal-list-item"><p class="admin-modal-list-title">${escapeHtml(response.responseTitle || 'Відгук')}</p><p class="admin-modal-list-text">${escapeHtml(response.responderName)} • ${escapeHtml(formatDate(response.createdAtIso || response.createdAt))}</p></li>`,
+            'Для цього допису ще немає відгуків.'
+          )}
+        </section>
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Пов’язані звіти</h3>
+          ${buildMiniList(
+            postReports,
+            (report) => `<li class="admin-modal-list-item"><p class="admin-modal-list-title">${escapeHtml(report.reportTitle || 'Звіт')}</p><p class="admin-modal-list-text">${escapeHtml(report.reporterName || 'Користувач')} • ${escapeHtml(formatDate(report.createdAtIso || report.createdAt))}</p></li>`,
+            'Для цього допису ще немає звітів.'
+          )}
+        </section>
+      `,
+      actions: [
+        { label: 'Закрити', className: 'admin-secondary-button' },
+      ],
+    });
+  }
+
+  function showResponseDetails(response) {
+    openAdminModal({
+      title: `Відгук: ${response.responseTitle || 'Без заголовка'}`,
+      bodyHtml: `
+        <div class="admin-modal-pills">
+          <span class="admin-modal-pill ${response.status === 'closed' ? 'is-closed' : 'is-open'}">${response.status === 'closed' ? 'Закритий' : 'Відкритий'}</span>
+        </div>
+        <div class="admin-modal-grid">
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Волонтер</p>
+            <p class="admin-modal-grid-value">${escapeHtml(response.responderName)}</p>
+          </div>
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Автор запиту</p>
+            <p class="admin-modal-grid-value">${escapeHtml(response.authorName)}</p>
+          </div>
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Створено</p>
+            <p class="admin-modal-grid-value">${escapeHtml(formatDate(response.createdAtIso || response.createdAt))}</p>
+          </div>
+        </div>
+        ${buildTags(response.tags || [])}
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Запит</h3>
+          <p class="admin-modal-copy"><strong>${escapeHtml(response.title || 'Без назви')}</strong><br>${escapeHtml(response.description || 'Опис відсутній.')}</p>
+        </section>
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Текст відгуку</h3>
+          <p class="admin-modal-copy">${escapeHtml(response.responseDescription || 'Текст відгуку відсутній.')}</p>
+        </section>
+      `,
+      actions: [
+        { label: 'Закрити', className: 'admin-secondary-button' },
+      ],
+    });
+  }
+
+  function showReportDetails(report) {
+    openAdminModal({
+      title: report.reportTitle || 'Звіт',
+      bodyHtml: `
+        <div class="admin-modal-pills">
+          <span class="admin-modal-pill ${report.reporterRole === 'helper' ? 'is-helper' : 'is-author'}">
+            ${report.reporterRole === 'helper' ? 'Від волонтера' : 'Від автора запиту'}
+          </span>
+        </div>
+        <div class="admin-modal-grid">
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Автор звіту</p>
+            <p class="admin-modal-grid-value">${escapeHtml(report.reporterName || 'Користувач')}</p>
+          </div>
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Роль автора</p>
+            <p class="admin-modal-grid-value">${escapeHtml(report.reporterUserRole || 'Не визначено')}</p>
+          </div>
+          <div class="admin-modal-grid-item">
+            <p class="admin-modal-grid-label">Створено</p>
+            <p class="admin-modal-grid-value">${escapeHtml(formatDate(report.createdAtIso || report.createdAt))}</p>
+          </div>
+        </div>
+        ${buildTags(report.requestSnapshot?.tags || [])}
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Пов’язаний запит</h3>
+          <p class="admin-modal-copy"><strong>${escapeHtml(report.requestSnapshot?.title || 'Без назви')}</strong><br>${escapeHtml(report.requestSnapshot?.description || 'Опис відсутній.')}</p>
+        </section>
+        <section class="admin-modal-section">
+          <h3 class="admin-modal-section-title">Текст звіту</h3>
+          <p class="admin-modal-copy">${escapeHtml(report.text || 'Текст звіту відсутній.')}</p>
+        </section>
+      `,
+      actions: [
+        { label: 'Закрити', className: 'admin-secondary-button' },
+      ],
+    });
+  }
+
+  function openDeleteConfirmation({ title, message, confirmLabel, onConfirm }) {
+    openAdminModal({
+      title,
+      bodyHtml: `<p class="admin-modal-copy">${escapeHtml(message)}</p>`,
+      actions: [
+        { label: 'Скасувати', className: 'admin-secondary-button' },
+        { label: confirmLabel, className: 'admin-danger-button', onClick: onConfirm },
+      ],
+    });
+  }
+
   async function loadAdminPage() {
     const usersContainer = document.getElementById('admin-users-list');
     const postsContainer = document.getElementById('admin-posts-list');
-    if (!usersContainer || !postsContainer) {
+    const responsesContainer = document.getElementById('admin-responses-list');
+    const reportsContainer = document.getElementById('admin-reports-list');
+    if (!usersContainer || !postsContainer || !responsesContainer || !reportsContainer) {
       return;
     }
 
@@ -514,158 +944,172 @@
     bindFilterValues();
     window.LoadingUi?.showSectionLoader(usersContainer, 'Завантажуємо користувачів...');
     window.LoadingUi?.showSectionLoader(postsContainer, 'Завантажуємо дописи...');
+    window.LoadingUi?.showSectionLoader(responsesContainer, 'Завантажуємо відгуки...');
+    window.LoadingUi?.showSectionLoader(reportsContainer, 'Завантажуємо звіти...');
 
     const hasAccess = await fetchAdminUsers(true);
     if (!hasAccess) {
-      state.posts = [];
       const message = window.AuthState?.isLoggedIn()
         ? 'Доступ до панелі дозволено лише адміністратору.'
         : 'Щоб відкрити панель адміністратора, потрібно увійти в систему.';
 
-      renderEmptyState(usersContainer, 'Доступ обмежено', message);
-      renderEmptyState(postsContainer, 'Доступ обмежено', message);
+      [usersContainer, postsContainer, responsesContainer, reportsContainer].forEach((container) => {
+        renderEmptyState(container, 'Доступ обмежено', message);
+      });
       setSummary();
       return;
     }
 
-    await fetchPosts();
+    await Promise.all([
+      fetchPosts(),
+      fetchResponses(),
+      fetchReports(),
+    ]);
+
     applyFilters();
   }
 
   async function handleDeleteUser(button) {
     const rnokpp = String(button.dataset.userRnokpp || '').trim();
-    if (!rnokpp) {
-      return;
-    }
+    if (!rnokpp) return;
 
     const user = state.users.find((item) => item.rnokpp === rnokpp);
     const userName = user?.full_name || 'цього користувача';
-    const isConfirmed = window.confirm(`Видалити користувача "${userName}"?`);
-    if (!isConfirmed) {
-      return;
-    }
 
-    window.LoadingUi?.setButtonLoading(button, true, 'Видаляємо...');
+    openDeleteConfirmation({
+      title: 'Підтвердження видалення',
+      message: `Видалити користувача "${userName}"?`,
+      confirmLabel: 'Видалити користувача',
+      onConfirm: async () => {
+        window.LoadingUi?.setButtonLoading(button, true, 'Видаляємо...');
 
-    try {
-      const response = await fetch(`/users/${encodeURIComponent(rnokpp)}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
-      });
-
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(result.message || 'Не вдалося видалити користувача.');
-      }
-
-      setFeedback(result.message || 'Користувача видалено.');
-      await loadAdminPage();
-    } catch (error) {
-      console.error('Помилка видалення користувача:', error);
-      setFeedback(error.message || 'Не вдалося видалити користувача.', 'error');
-    }
+        try {
+          const result = await fetchJson(`/users/${encodeURIComponent(rnokpp)}`, {
+            method: 'DELETE',
+            credentials: 'same-origin',
+          });
+          setFeedback(result.message || 'Користувача видалено.');
+          await loadAdminPage();
+        } catch (error) {
+          console.error('Помилка видалення користувача:', error);
+          setFeedback(error.message || 'Не вдалося видалити користувача.', 'error');
+        }
+      },
+    });
   }
 
   async function handleDeletePost(button) {
     const postId = String(button.dataset.postId || '').trim();
-    if (!postId) {
-      return;
-    }
+    if (!postId) return;
 
     const post = state.posts.find((item) => String(item.postId) === postId);
     const postTitle = post?.title || 'цей допис';
-    const isConfirmed = window.confirm(`Видалити допис "${postTitle}"?`);
-    if (!isConfirmed) {
-      return;
-    }
 
-    window.LoadingUi?.setButtonLoading(button, true, 'Видаляємо...');
+    openDeleteConfirmation({
+      title: 'Підтвердження видалення',
+      message: `Видалити допис "${postTitle}"?`,
+      confirmLabel: 'Видалити допис',
+      onConfirm: async () => {
+        window.LoadingUi?.setButtonLoading(button, true, 'Видаляємо...');
 
-    try {
-      const response = await fetch(`/posts/${encodeURIComponent(postId)}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
-      });
-
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(result.message || 'Не вдалося видалити допис.');
-      }
-
-      setFeedback(result.message || 'Допис видалено.');
-      await loadAdminPage();
-    } catch (error) {
-      console.error('Помилка видалення допису:', error);
-      setFeedback(error.message || 'Не вдалося видалити допис.', 'error');
-    }
+        try {
+          const result = await fetchJson(`/posts/${encodeURIComponent(postId)}`, {
+            method: 'DELETE',
+            credentials: 'same-origin',
+          });
+          setFeedback(result.message || 'Допис видалено.');
+          await loadAdminPage();
+        } catch (error) {
+          console.error('Помилка видалення допису:', error);
+          setFeedback(error.message || 'Не вдалося видалити допис.', 'error');
+        }
+      },
+    });
   }
 
   document.addEventListener('input', (event) => {
-    if (event.target.matches('#admin-user-search')) {
-      state.filters.userSearch = event.target.value;
-      applyFilters();
-      return;
-    }
+    const inputMap = {
+      'admin-user-search': 'userSearch',
+      'admin-post-search': 'postSearch',
+      'admin-response-search': 'responseSearch',
+      'admin-report-search': 'reportSearch',
+    };
 
-    if (event.target.matches('#admin-post-search')) {
-      state.filters.postSearch = event.target.value;
-      applyFilters();
-    }
+    const key = inputMap[event.target.id];
+    if (!key) return;
+
+    state.filters[key] = event.target.value;
+    applyFilters();
   });
 
   document.addEventListener('change', (event) => {
-    if (event.target.matches('#admin-user-role-filter')) {
-      state.filters.userRole = event.target.value;
+    const selectMap = {
+      'admin-user-role-filter': 'userRole',
+      'admin-user-sort': 'userSort',
+      'admin-post-type-filter': 'postType',
+      'admin-post-status-filter': 'postStatus',
+      'admin-post-sort': 'postSort',
+      'admin-response-status-filter': 'responseStatus',
+      'admin-response-sort': 'responseSort',
+      'admin-report-type-filter': 'reportType',
+      'admin-report-sort': 'reportSort',
+    };
+
+    if (event.target.id in selectMap) {
+      state.filters[selectMap[event.target.id]] = event.target.value;
       applyFilters();
       return;
     }
 
-    if (event.target.matches('#admin-user-sort')) {
-      state.filters.userSort = event.target.value;
-      applyFilters();
-      return;
-    }
+    const checkboxMap = {
+      'admin-user-removable-filter': 'userRemovableOnly',
+      'admin-post-removable-filter': 'postRemovableOnly',
+    };
 
-    if (event.target.matches('#admin-user-removable-filter')) {
-      state.filters.userRemovableOnly = event.target.checked;
-      applyFilters();
-      return;
-    }
-
-    if (event.target.matches('#admin-post-type-filter')) {
-      state.filters.postType = event.target.value;
-      applyFilters();
-      return;
-    }
-
-    if (event.target.matches('#admin-post-status-filter')) {
-      state.filters.postStatus = event.target.value;
-      applyFilters();
-      return;
-    }
-
-    if (event.target.matches('#admin-post-sort')) {
-      state.filters.postSort = event.target.value;
-      applyFilters();
-      return;
-    }
-
-    if (event.target.matches('#admin-post-removable-filter')) {
-      state.filters.postRemovableOnly = event.target.checked;
+    if (event.target.id in checkboxMap) {
+      state.filters[checkboxMap[event.target.id]] = event.target.checked;
       applyFilters();
     }
   });
 
   document.addEventListener('click', (event) => {
-    const refreshUsersButton = event.target.closest('#admin-refresh-users-button');
-    if (refreshUsersButton) {
+    const refreshButton = event.target.closest('#admin-refresh-users-button, #admin-refresh-posts-button, #admin-refresh-responses-button, #admin-refresh-reports-button');
+    if (refreshButton) {
       void loadAdminPage();
       return;
     }
 
-    const refreshPostsButton = event.target.closest('#admin-refresh-posts-button');
-    if (refreshPostsButton) {
-      void loadAdminPage();
+    const closeModalTrigger = event.target.closest('#admin-modal-close-button') || event.target.id === 'admin-modal-overlay';
+    if (closeModalTrigger) {
+      closeAdminModal();
+      return;
+    }
+
+    const viewUserButton = event.target.closest('.admin-view-user-button');
+    if (viewUserButton) {
+      const user = state.users.find((item) => item.rnokpp === String(viewUserButton.dataset.userRnokpp || '').trim());
+      if (user) showUserDetails(user);
+      return;
+    }
+
+    const viewPostButton = event.target.closest('.admin-view-post-button');
+    if (viewPostButton) {
+      const post = state.posts.find((item) => String(item.postId) === String(viewPostButton.dataset.postId || '').trim());
+      if (post) showPostDetails(post);
+      return;
+    }
+
+    const viewResponseButton = event.target.closest('.admin-view-response-button');
+    if (viewResponseButton) {
+      const response = state.responses.find((item) => String(item.responseId) === String(viewResponseButton.dataset.responseId || '').trim());
+      if (response) showResponseDetails(response);
+      return;
+    }
+
+    const viewReportButton = event.target.closest('.admin-view-report-button');
+    if (viewReportButton) {
+      const report = state.reports.find((item) => String(item.reportId) === String(viewReportButton.dataset.reportId || '').trim());
+      if (report) showReportDetails(report);
       return;
     }
 
@@ -678,6 +1122,12 @@
     const deletePostButton = event.target.closest('.admin-delete-post-button');
     if (deletePostButton) {
       void handleDeletePost(deletePostButton);
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeAdminModal();
     }
   });
 
@@ -696,6 +1146,8 @@
       state.hasAccess = false;
       state.users = [];
       state.posts = [];
+      state.responses = [];
+      state.reports = [];
       toggleAdminNav(false);
       return;
     }

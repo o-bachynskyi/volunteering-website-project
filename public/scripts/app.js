@@ -31,6 +31,26 @@ function getSearchState() {
   };
 }
 
+function clearSearchState(shouldDispatch = true) {
+  if (searchInput) {
+    searchInput.value = '';
+  }
+
+  const searchTagsInput = document.querySelector('.tags-input');
+  if (searchTagsInput) {
+    searchTagsInput.value = '';
+  }
+
+  const searchTagsList = document.querySelector('.tags-list');
+  if (searchTagsList) {
+    searchTagsList.innerHTML = '';
+  }
+
+  if (shouldDispatch) {
+    dispatchSearchChange();
+  }
+}
+
 function dispatchSearchChange() {
   document.dispatchEvent(new CustomEvent('search:changed', {
     detail: getSearchState(),
@@ -39,6 +59,9 @@ function dispatchSearchChange() {
 
 window.SearchState = {
   getState: getSearchState,
+  clear(shouldDispatch = true) {
+    clearSearchState(shouldDispatch);
+  },
 };
 
 function setImageUploadError(form, message = '') {

@@ -4,8 +4,8 @@
             <p class="admin-panel-eyebrow">Керування системою</p>
             <h1 class="admin-panel-title">Панель адміністратора</h1>
             <p class="admin-panel-description">
-                Тут можна переглядати користувачів, контролювати публікації та видаляти об’єкти,
-                якщо це потрібно для модерації системи.
+                Тут можна переглядати користувачів, дописи, відгуки та звіти, а також виконувати модераційні дії
+                в межах наявних обмежень системи.
             </p>
         </div>
     </header>
@@ -28,6 +28,21 @@
             <p class="admin-summary-value" id="admin-open-requests-count">0</p>
             <p class="admin-summary-note" id="admin-open-requests-note">0 після фільтрації</p>
         </article>
+        <article class="admin-summary-card">
+            <p class="admin-summary-label">Відгуки</p>
+            <p class="admin-summary-value" id="admin-responses-count">0</p>
+            <p class="admin-summary-note" id="admin-responses-note">0 після фільтрації</p>
+        </article>
+        <article class="admin-summary-card">
+            <p class="admin-summary-label">Звіти</p>
+            <p class="admin-summary-value" id="admin-reports-count">0</p>
+            <p class="admin-summary-note" id="admin-reports-note">0 після фільтрації</p>
+        </article>
+        <article class="admin-summary-card">
+            <p class="admin-summary-label">Користувачі без активності</p>
+            <p class="admin-summary-value" id="admin-inactive-users-count">0</p>
+            <p class="admin-summary-note" id="admin-inactive-users-note">без дописів, відгуків і звітів</p>
+        </article>
     </section>
 
     <section class="admin-section">
@@ -38,20 +53,14 @@
                     Видалення доступне лише для користувачів без пов’язаних дописів, відгуків і звітів.
                 </p>
             </div>
-            <button type="button" class="button admin-refresh-button" id="admin-refresh-users-button">Оновити список</button>
+            <button type="button" class="button admin-refresh-button" id="admin-refresh-users-button">Оновити</button>
         </div>
 
         <div class="admin-filters">
             <label class="admin-filter-field">
                 <span class="admin-filter-label">Пошук</span>
-                <input
-                    type="search"
-                    id="admin-user-search"
-                    class="admin-filter-input"
-                    placeholder="Ім’я, email, РНОКПП або тег"
-                >
+                <input type="search" id="admin-user-search" class="admin-filter-input" placeholder="Ім’я, email, РНОКПП або тег">
             </label>
-
             <label class="admin-filter-field">
                 <span class="admin-filter-label">Роль</span>
                 <select id="admin-user-role-filter" class="admin-filter-input">
@@ -60,7 +69,6 @@
                     <option value="vo">Волонтери</option>
                 </select>
             </label>
-
             <label class="admin-filter-field">
                 <span class="admin-filter-label">Сортування</span>
                 <select id="admin-user-sort" class="admin-filter-input">
@@ -70,7 +78,6 @@
                     <option value="role">За роллю</option>
                 </select>
             </label>
-
             <label class="admin-filter-checkbox">
                 <input type="checkbox" id="admin-user-removable-filter">
                 <span>Лише тих, кого можна видалити</span>
@@ -85,23 +92,17 @@
             <div>
                 <h2 class="admin-section-title">Дописи</h2>
                 <p class="admin-section-description">
-                    Адміністратор може видаляти будь-які дописи, якщо з ними ще не пов’язані відгуки або звіти.
+                    Тут відображаються всі запити на допомогу та збори коштів, доступні для модерації.
                 </p>
             </div>
-            <button type="button" class="button admin-refresh-button" id="admin-refresh-posts-button">Оновити дописи</button>
+            <button type="button" class="button admin-refresh-button" id="admin-refresh-posts-button">Оновити</button>
         </div>
 
         <div class="admin-filters">
             <label class="admin-filter-field">
                 <span class="admin-filter-label">Пошук</span>
-                <input
-                    type="search"
-                    id="admin-post-search"
-                    class="admin-filter-input"
-                    placeholder="Назва, автор, опис або тег"
-                >
+                <input type="search" id="admin-post-search" class="admin-filter-input" placeholder="Назва, автор, опис або тег">
             </label>
-
             <label class="admin-filter-field">
                 <span class="admin-filter-label">Тип</span>
                 <select id="admin-post-type-filter" class="admin-filter-input">
@@ -110,7 +111,6 @@
                     <option value="fundraising">Збори коштів</option>
                 </select>
             </label>
-
             <label class="admin-filter-field">
                 <span class="admin-filter-label">Статус</span>
                 <select id="admin-post-status-filter" class="admin-filter-input">
@@ -119,7 +119,6 @@
                     <option value="closed">Закриті</option>
                 </select>
             </label>
-
             <label class="admin-filter-field">
                 <span class="admin-filter-label">Сортування</span>
                 <select id="admin-post-sort" class="admin-filter-input">
@@ -130,7 +129,6 @@
                     <option value="title-asc">За назвою (А-Я)</option>
                 </select>
             </label>
-
             <label class="admin-filter-checkbox">
                 <input type="checkbox" id="admin-post-removable-filter">
                 <span>Лише ті, що можна видалити</span>
@@ -139,4 +137,90 @@
 
         <div id="admin-posts-list" class="admin-stack"></div>
     </section>
+
+    <section class="admin-section">
+        <div class="admin-section-heading">
+            <div>
+                <h2 class="admin-section-title">Відгуки</h2>
+                <p class="admin-section-description">
+                    Повний список відгуків допомагає бачити зв’язок між волонтерами та конкретними запитами.
+                </p>
+            </div>
+            <button type="button" class="button admin-refresh-button" id="admin-refresh-responses-button">Оновити</button>
+        </div>
+
+        <div class="admin-filters">
+            <label class="admin-filter-field">
+                <span class="admin-filter-label">Пошук</span>
+                <input type="search" id="admin-response-search" class="admin-filter-input" placeholder="Волонтер, автор запиту, заголовок">
+            </label>
+            <label class="admin-filter-field">
+                <span class="admin-filter-label">Статус</span>
+                <select id="admin-response-status-filter" class="admin-filter-input">
+                    <option value="all">Усі статуси</option>
+                    <option value="open">Відкриті</option>
+                    <option value="closed">Закриті</option>
+                </select>
+            </label>
+            <label class="admin-filter-field">
+                <span class="admin-filter-label">Сортування</span>
+                <select id="admin-response-sort" class="admin-filter-input">
+                    <option value="date-desc">Спочатку новіші</option>
+                    <option value="date-asc">Спочатку старіші</option>
+                    <option value="volunteer">За волонтером</option>
+                </select>
+            </label>
+        </div>
+
+        <div id="admin-responses-list" class="admin-stack"></div>
+    </section>
+
+    <section class="admin-section">
+        <div class="admin-section-heading">
+            <div>
+                <h2 class="admin-section-title">Звіти</h2>
+                <p class="admin-section-description">
+                    Звіти показують завершені етапи взаємодії та дозволяють переглянути підтвердження допомоги.
+                </p>
+            </div>
+            <button type="button" class="button admin-refresh-button" id="admin-refresh-reports-button">Оновити</button>
+        </div>
+
+        <div class="admin-filters">
+            <label class="admin-filter-field">
+                <span class="admin-filter-label">Пошук</span>
+                <input type="search" id="admin-report-search" class="admin-filter-input" placeholder="Автор звіту, запит або текст">
+            </label>
+            <label class="admin-filter-field">
+                <span class="admin-filter-label">Тип звіту</span>
+                <select id="admin-report-type-filter" class="admin-filter-input">
+                    <option value="all">Усі типи</option>
+                    <option value="author">Від автора запиту</option>
+                    <option value="helper">Від волонтера</option>
+                </select>
+            </label>
+            <label class="admin-filter-field">
+                <span class="admin-filter-label">Сортування</span>
+                <select id="admin-report-sort" class="admin-filter-input">
+                    <option value="date-desc">Спочатку новіші</option>
+                    <option value="date-asc">Спочатку старіші</option>
+                    <option value="reporter">За автором звіту</option>
+                </select>
+            </label>
+        </div>
+
+        <div id="admin-reports-list" class="admin-stack"></div>
+    </section>
 </section>
+
+<div id="admin-modal-overlay" class="modal-overlay hidden admin-modal-overlay"></div>
+<div id="admin-modal" class="admin-modal hidden" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
+    <div class="admin-modal-header">
+        <h2 id="admin-modal-title" class="admin-modal-title">Деталі</h2>
+        <button type="button" class="close-modal-button" id="admin-modal-close-button" aria-label="Закрити">
+            <img src="/public/images/close-modal-icon.png" alt="Закрити">
+        </button>
+    </div>
+    <div id="admin-modal-body" class="admin-modal-body"></div>
+    <div id="admin-modal-actions" class="admin-modal-actions"></div>
+</div>

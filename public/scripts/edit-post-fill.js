@@ -1,11 +1,7 @@
-document.addEventListener('click', function (event) {
-  const editButton = event.target.closest('.edit-post-button');
-  if (!editButton) return;
+(function attachEditPostFill() {
+  function fillEditPostFormFromArticle(postArticle) {
+    if (!postArticle) return;
 
-  const postArticle = editButton.closest('.post');
-  if (!postArticle) return;
-
-  setTimeout(() => {
     try {
       const editForm = document.getElementById('edit-post-form');
       if (!editForm) return;
@@ -83,5 +79,9 @@ document.addEventListener('click', function (event) {
     } catch (error) {
       console.error('Помилка при заповненні форми редагування поста:', error);
     }
-  }, 50);
-});
+  }
+
+  window.EditPostFill = {
+    fillFromPost: fillEditPostFormFromArticle,
+  };
+})();

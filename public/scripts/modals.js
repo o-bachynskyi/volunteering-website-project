@@ -31,7 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('click', async (e) => {
-    if (e.target.closest('.edit-post-button')) {
+    const editPostButton = e.target.closest('.edit-post-button');
+    if (editPostButton) {
+      const postArticle = editPostButton.closest('.post');
+
       if (!document.getElementById('post-modal')) {
         const res = await fetch('/public/pages/components/modal-forms/add-edit-post-form/add-edit-post.html');
         const html = await res.text();
@@ -42,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showAddEditPostModal('edit');
       document.getElementById('add-post-form')?.classList.remove('active-modal');
       document.getElementById('edit-post-form')?.classList.add('active-modal');
+      window.EditPostFill?.fillFromPost?.(postArticle);
     }
   });
 
@@ -55,12 +59,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       await window.AuthState?.refresh();
       window.AuthState?.renderUserProfile();
+      window.EditProfileFill?.fill?.();
 
       document.getElementById('modal-overlay')?.classList.remove('hidden');
       document.getElementById('edit-profile-modal')?.classList.remove('hidden');
       document.body.classList.add('modal-open');
 
       bindSharedModalClose();
+      document.dispatchEvent(new CustomEvent('edit-profile:open'));
     }
   });
 
