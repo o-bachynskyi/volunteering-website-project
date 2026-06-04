@@ -146,6 +146,7 @@ async function sendMail(message) {
 function buildResponseNotificationText({
   postOwnerName,
   responderName,
+  responderEmail,
   postTitle,
   responseTitle,
   responseDescription,
@@ -163,6 +164,8 @@ function buildResponseNotificationText({
     'Текст відгуку:',
     responseDescription || 'Без опису',
     '',
+    `Пошта для зв'язку: ${responderEmail || 'Не вказана'}`,
+    '',
     `Перевірити можна тут: ${projectUrl}`,
   ].join('\n');
 }
@@ -170,6 +173,7 @@ function buildResponseNotificationText({
 function buildResponseNotificationHtml({
   postOwnerName,
   responderName,
+  responderEmail,
   postTitle,
   responseTitle,
   responseDescription,
@@ -185,6 +189,7 @@ function buildResponseNotificationHtml({
       <p><strong>Заголовок відгуку:</strong> ${responseTitle || 'Без заголовка'}</p>
       <p><strong>Текст відгуку:</strong></p>
       <p>${responseDescription || 'Без опису'}</p>
+      <p><strong>Пошта для зв'язку:</strong> ${responderEmail || 'Не вказана'}</p>
       <p><a href="${projectUrl}">Відкрити сайт</a></p>
     </div>
   `;
@@ -194,6 +199,7 @@ async function sendResponseNotification({
   postOwnerEmail,
   postOwnerName,
   responderName,
+  responderEmail,
   postTitle,
   responseTitle,
   responseDescription,
@@ -211,6 +217,7 @@ async function sendResponseNotification({
     text: buildResponseNotificationText({
       postOwnerName,
       responderName,
+      responderEmail,
       postTitle,
       responseTitle,
       responseDescription,
@@ -219,6 +226,7 @@ async function sendResponseNotification({
     html: buildResponseNotificationHtml({
       postOwnerName,
       responderName,
+      responderEmail,
       postTitle,
       responseTitle,
       responseDescription,

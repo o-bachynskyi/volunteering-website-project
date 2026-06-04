@@ -402,6 +402,7 @@ async function createResponse(req, res) {
         postOwnerEmail: post.owner_email,
         postOwnerName: post.owner_name,
         responderName: currentUser.user_name,
+        responderEmail: currentUser.user_email,
         postTitle: post.post_title,
         responseTitle: title,
         responseDescription: description,
