@@ -275,7 +275,7 @@ async function createResponse(req, res) {
   const postId = Number(req.body.post_id);
   const title = String(req.body.title || '').trim();
   const description = String(req.body.description || '').trim();
-  const images = normalizeImages(req.body.images);
+  const images = [];
 
   if (!Number.isInteger(postId)) {
     return res.status(400).json({ message: 'Некоректний запит.' });

@@ -2069,7 +2069,7 @@
             post_id: Number(requestId),
             title: answerForm.querySelector('#answer-title')?.value.trim() || '',
             description: answerForm.querySelector('#answer-text')?.value.trim() || '',
-            images: readImagesFromForm(answerForm),
+            images: [],
           }),
         });
 
